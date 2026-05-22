@@ -176,8 +176,6 @@ function Instructions() {
         />
       )}
 
-      <AssembledPreviews layers={layers} />
-
       <footer className="flex items-center justify-between pt-2">
         <button className="text-sm font-medium text-botscrew-500 hover:text-botscrew-600">
           Reset to default
@@ -429,44 +427,6 @@ function EmailNotConnectedNotice({
         limit={limit}
         hint="This layer is editable now but will only ship to the Bot once Email is connected."
       />
-    </div>
-  );
-}
-
-function AssembledPreviews({ layers }: { layers: Record<LayerId, string> }) {
-  return (
-    <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-card">
-      <div className="text-[11px] font-semibold tracking-wider text-slate-400 uppercase mb-3">
-        Assembled per channel · what each Botscrew Bot actually sees
-      </div>
-      <div className="space-y-2">
-        {jacksonHole.channels.map((c) => {
-          const override = layers[c.id];
-          const assembled = layers.parent.length + override.length;
-          const empty = c.status === 'not-connected';
-          return (
-            <div key={c.id} className="flex items-center justify-between text-sm">
-              <div className="flex items-center gap-2">
-                <LayerIcon id={c.id} className="h-4 w-4 text-slate-500" />
-                <span className="font-medium text-ink-900">{c.label}</span>
-                {c.botscrewBotId && (
-                  <span className="text-xs font-mono text-slate-400">{c.botscrewBotId}</span>
-                )}
-              </div>
-              <div className="flex items-center gap-3">
-                <span className={empty ? 'text-slate-400 italic' : 'text-slate-600'}>
-                  {empty ? 'reserved · not yet shipped' : `${assembled.toLocaleString()} chars`}
-                </span>
-                {!empty && (
-                  <button className="text-xs font-medium text-botscrew-500 hover:text-botscrew-600">
-                    View →
-                  </button>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
     </div>
   );
 }
