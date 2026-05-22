@@ -161,6 +161,7 @@ function Instructions() {
         open={testVoiceOpen}
         onClose={() => setTestVoiceOpen(false)}
         voiceStack={voiceStack}
+        systemPrompt={`${parentPrompt}\n\n---\n\n${voicePrompt}`}
       />
 
       <div>
