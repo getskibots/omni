@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import DashboardShell from './components/DashboardShell';
 import Knowledge from './pages/Knowledge';
 import Placeholder from './pages/Placeholder';
+import SettingsChannels from './pages/SettingsChannels';
 
 export default function App() {
   return (
@@ -15,11 +16,8 @@ export default function App() {
         <Route path="/flows" element={<Placeholder title="Flows" />} />
         <Route path="/actions" element={<Placeholder title="Actions" />} />
         <Route path="/triggers" element={<Placeholder title="Triggers" />} />
-        <Route path="/channels" element={<Placeholder title="Channels" />} />
-        <Route path="/channels/chat" element={<Placeholder title="Chat channel" />} />
-        <Route path="/channels/voice" element={<Placeholder title="Voice channel" />} />
-        <Route path="/channels/email" element={<Placeholder title="Email channel" />} />
-        <Route path="/settings" element={<Placeholder title="Settings" />} />
+        <Route path="/settings" element={<Navigate to="/settings/channels" replace />} />
+        <Route path="/settings/channels" element={<SettingsChannels />} />
         <Route path="/help" element={<Placeholder title="Help" />} />
         <Route path="*" element={<Navigate to="/knowledge" replace />} />
       </Routes>

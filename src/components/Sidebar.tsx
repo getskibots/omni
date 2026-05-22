@@ -6,16 +6,16 @@ interface NavItem {
   icon: string;
 }
 
-interface NavGroup {
-  items: NavItem[];
-}
-
-const groups: NavGroup[] = [
-  { items: [{ to: '/analytics', label: 'Analytics', icon: '📊' }, { to: '/support', label: 'Support', icon: '💬' }] },
-  { items: [{ to: '/knowledge', label: 'Knowledge', icon: '🧠' }, { to: '/ai-edits', label: 'AI Edits', icon: '✏️' }] },
-  { items: [{ to: '/flows', label: 'Flows', icon: '🔀' }, { to: '/actions', label: 'Actions', icon: '⚡' }, { to: '/triggers', label: 'Triggers', icon: '🎯' }] },
-  { items: [{ to: '/channels', label: 'Channels', icon: '📡' }] },
-  { items: [{ to: '/settings', label: 'Settings', icon: '⚙️' }, { to: '/help', label: 'Help', icon: '❓' }] },
+const items: NavItem[] = [
+  { to: '/analytics', label: 'Analytics', icon: '📊' },
+  { to: '/support', label: 'Support', icon: '💬' },
+  { to: '/knowledge', label: 'Knowledge', icon: '🧠' },
+  { to: '/ai-edits', label: 'AI Edits', icon: '✏️' },
+  { to: '/flows', label: 'Flows', icon: '🔀' },
+  { to: '/actions', label: 'Actions', icon: '⚡' },
+  { to: '/triggers', label: 'Triggers', icon: '🎯' },
+  { to: '/settings', label: 'Settings', icon: '⚙️' },
+  { to: '/help', label: 'Help', icon: '❓' },
 ];
 
 export default function Sidebar() {
@@ -27,24 +27,19 @@ export default function Sidebar() {
         </div>
       </div>
       <nav className="flex-1 py-3">
-        {groups.map((group, gi) => (
-          <div key={gi}>
-            {group.items.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                className={({ isActive }) =>
-                  `flex flex-col items-center gap-1 py-3 text-[10px] transition ${
-                    isActive ? 'bg-botscrew-700 text-white' : 'text-white/80 hover:bg-botscrew-600'
-                  }`
-                }
-              >
-                <span className="text-lg leading-none">{item.icon}</span>
-                <span className="leading-tight">{item.label}</span>
-              </NavLink>
-            ))}
-            {gi < groups.length - 1 && <div className="h-px bg-white/10 my-2 mx-3" />}
-          </div>
+        {items.map((item) => (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            className={({ isActive }) =>
+              `flex flex-col items-center gap-1 py-3 text-[10px] transition ${
+                isActive ? 'bg-botscrew-700 text-white' : 'text-white/80 hover:bg-botscrew-600'
+              }`
+            }
+          >
+            <span className="text-lg leading-none">{item.icon}</span>
+            <span className="leading-tight">{item.label}</span>
+          </NavLink>
         ))}
       </nav>
     </aside>
