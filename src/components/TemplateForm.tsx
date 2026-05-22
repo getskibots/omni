@@ -1,7 +1,19 @@
 import { useMemo, useState } from 'react';
-import { Check, Sparkles, ChevronDown, ChevronRight, Lock } from 'lucide-react';
-import { jacksonHole, renderTemplate, INDUSTRY_LABELS } from '../data/parent';
-import type { ResortTemplate, KnowledgeGroup } from '../data/parent';
+import { Check, Sparkles, ChevronDown, ChevronRight, Lock, Plus, X } from 'lucide-react';
+import {
+  jacksonHole,
+  renderTemplate,
+  INDUSTRY_LABELS,
+  NOTE_TYPE_META,
+  sortNotes,
+} from '../data/parent';
+import type {
+  ResortTemplate,
+  KnowledgeGroup,
+  KnowledgeUrl,
+  KnowledgeNote,
+  KnowledgeNoteType,
+} from '../data/parent';
 import { BOILERPLATE_SECTIONS } from '../data/template-boilerplate';
 
 export default function TemplateForm() {
@@ -19,7 +31,7 @@ export default function TemplateForm() {
   const updateKnowledge = (
     groupId: string,
     entryKey: string,
-    patch: Partial<{ url: string; enabled: boolean }>,
+    patch: Partial<KnowledgeUrl>,
   ) => {
     setTemplate({
       ...template,
@@ -32,6 +44,20 @@ export default function TemplateForm() {
             },
       ),
     });
+  };
+
+  const addNote = (groupId: string, entryKey: string, note: KnowledgeNote) => {
+    const group = template.knowledgeGroups.find((g) => g.id === groupId);
+    const entry = group?.entries.find((e) => e.key === entryKey);
+    const existing = entry?.notes ?? [];
+    updateKnowledge(groupId, entryKey, { notes: [...existing, note] });
+  };
+
+  const removeNote = (groupId: string, entryKey: string, noteId: string) => {
+    const group = template.knowledgeGroups.find((g) => g.id === groupId);
+    const entry = group?.entries.find((e) => e.key === entryKey);
+    const filtered = (entry?.notes ?? []).filter((n) => n.id !== noteId);
+    updateKnowledge(groupId, entryKey, { notes: filtered });
   };
 
   const updateFlow = (key: string, enabled: boolean) => {
@@ -122,6 +148,8 @@ export default function TemplateForm() {
               expanded={expandedGroups.has(group.id)}
               onToggle={() => toggleGroup(group.id)}
               onUpdate={(entryKey, patch) => updateKnowledge(group.id, entryKey, patch)}
+              onAddNote={(entryKey, note) => addNote(group.id, entryKey, note)}
+              onRemoveNote={(entryKey, noteId) => removeNote(group.id, entryKey, noteId)}
             />
           ))}
         </div>
@@ -253,13 +281,18 @@ function KnowledgeGroupCard({
   expanded,
   onToggle,
   onUpdate,
+  onAddNote,
+  onRemoveNote,
 }: {
   group: KnowledgeGroup;
   expanded: boolean;
   onToggle: () => void;
-  onUpdate: (entryKey: string, patch: Partial<{ url: string; enabled: boolean }>) => void;
+  onUpdate: (entryKey: string, patch: Partial<KnowledgeUrl>) => void;
+  onAddNote: (entryKey: string, note: KnowledgeNote) => void;
+  onRemoveNote: (entryKey: string, noteId: string) => void;
 }) {
   const enabledCount = group.entries.filter((e) => e.enabled).length;
+  const totalNotes = group.entries.reduce((sum, e) => sum + (e.notes?.length ?? 0), 0);
   return (
     <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
       <button
@@ -279,38 +312,174 @@ function KnowledgeGroupCard({
         </div>
         <span className="text-xs text-slate-500">
           {enabledCount} of {group.entries.length} enabled
+          {totalNotes > 0 && <span className="ml-2 text-slate-400">· {totalNotes} notes</span>}
         </span>
       </button>
       {expanded && (
-        <div className="border-t border-slate-100 p-3 space-y-1.5">
+        <div className="border-t border-slate-100 p-3 space-y-3">
           {group.entries.map((e) => (
-            <div
+            <EntryRow
               key={e.key}
-              className="grid grid-cols-[24px_180px_minmax(0,1fr)] items-center gap-3 py-0.5"
-            >
-              <Toggle
-                checked={e.enabled}
-                onChange={(v) => onUpdate(e.key, { enabled: v })}
-              />
-              <span className={`text-sm ${e.enabled ? 'text-ink-900' : 'text-slate-400'}`}>
-                {e.label}
-              </span>
-              <input
-                type="text"
-                value={e.url}
-                onChange={(ev) => onUpdate(e.key, { url: ev.target.value })}
-                disabled={!e.enabled}
-                placeholder={e.enabled ? 'https://…' : ''}
-                className={`text-sm font-mono px-2 py-1 rounded-md border ${
-                  e.enabled
-                    ? 'border-slate-200 bg-white text-ink-900'
-                    : 'border-slate-100 bg-slate-50 text-slate-400'
-                } focus:outline-none focus:ring-2 focus:ring-botscrew-400`}
-              />
-            </div>
+              entry={e}
+              onUpdate={(patch) => onUpdate(e.key, patch)}
+              onAddNote={(note) => onAddNote(e.key, note)}
+              onRemoveNote={(noteId) => onRemoveNote(e.key, noteId)}
+            />
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function EntryRow({
+  entry,
+  onUpdate,
+  onAddNote,
+  onRemoveNote,
+}: {
+  entry: KnowledgeUrl;
+  onUpdate: (patch: Partial<KnowledgeUrl>) => void;
+  onAddNote: (note: KnowledgeNote) => void;
+  onRemoveNote: (noteId: string) => void;
+}) {
+  const [adding, setAdding] = useState(false);
+  return (
+    <div className="space-y-1.5">
+      <div className="grid grid-cols-[24px_180px_minmax(0,1fr)] items-center gap-3">
+        <Toggle checked={entry.enabled} onChange={(v) => onUpdate({ enabled: v })} />
+        <span className={`text-sm ${entry.enabled ? 'text-ink-900' : 'text-slate-400'}`}>
+          {entry.label}
+        </span>
+        <input
+          type="text"
+          value={entry.url}
+          onChange={(ev) => onUpdate({ url: ev.target.value })}
+          disabled={!entry.enabled}
+          placeholder={entry.enabled ? 'https://…' : ''}
+          className={`text-sm font-mono px-2 py-1 rounded-md border ${
+            entry.enabled
+              ? 'border-slate-200 bg-white text-ink-900'
+              : 'border-slate-100 bg-slate-50 text-slate-400'
+          } focus:outline-none focus:ring-2 focus:ring-botscrew-400`}
+        />
+      </div>
+
+      {entry.enabled && (
+        <div className="ml-[36px] space-y-1.5">
+          {entry.notes &&
+            entry.notes.length > 0 &&
+            sortNotes(entry.notes).map((n) => (
+              <NotePill key={n.id} note={n} onRemove={() => onRemoveNote(n.id)} />
+            ))}
+          {adding ? (
+            <NoteEditor
+              onSave={(note) => {
+                onAddNote(note);
+                setAdding(false);
+              }}
+              onCancel={() => setAdding(false)}
+            />
+          ) : (
+            <button
+              onClick={() => setAdding(true)}
+              className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-botscrew-600 px-1.5 py-0.5"
+            >
+              <Plus className="h-3 w-3" strokeWidth={2} /> Add note
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function NotePill({ note, onRemove }: { note: KnowledgeNote; onRemove: () => void }) {
+  const meta = NOTE_TYPE_META[note.type];
+  return (
+    <div
+      className={`group flex items-start gap-2 px-2.5 py-1.5 rounded-md border text-xs ${meta.tone}`}
+    >
+      <span className="font-semibold whitespace-nowrap">
+        <span className="mr-1">{meta.emoji}</span>
+        {meta.renderLabel}:
+      </span>
+      <span className="flex-1 leading-relaxed">
+        {note.type === 'script' ? <em>"{note.text}"</em> : note.text}
+      </span>
+      <button
+        onClick={onRemove}
+        className="opacity-0 group-hover:opacity-60 hover:!opacity-100 transition"
+        title="Remove note"
+      >
+        <X className="h-3.5 w-3.5" strokeWidth={2} />
+      </button>
+    </div>
+  );
+}
+
+function NoteEditor({
+  onSave,
+  onCancel,
+}: {
+  onSave: (note: KnowledgeNote) => void;
+  onCancel: () => void;
+}) {
+  const [type, setType] = useState<KnowledgeNoteType>('rule');
+  const [text, setText] = useState('');
+  const save = () => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    onSave({ id: `n-${Math.random().toString(36).slice(2, 9)}`, type, text: trimmed });
+  };
+  return (
+    <div className="bg-slate-50 border border-slate-200 rounded-md p-2.5 space-y-2">
+      <div className="flex items-center gap-2">
+        <label className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold">
+          Type
+        </label>
+        <select
+          value={type}
+          onChange={(e) => setType(e.target.value as KnowledgeNoteType)}
+          className="text-xs border border-slate-200 rounded-md px-2 py-1 bg-white"
+        >
+          {(['critical', 'rule', 'script', 'faq'] as KnowledgeNoteType[]).map((t) => (
+            <option key={t} value={t}>
+              {NOTE_TYPE_META[t].emoji} {NOTE_TYPE_META[t].label}
+            </option>
+          ))}
+        </select>
+      </div>
+      <textarea
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        autoFocus
+        placeholder={
+          type === 'critical'
+            ? 'A high-priority rule the bot must surface…'
+            : type === 'script'
+              ? 'Exact phrasing the bot should use…'
+              : type === 'faq'
+                ? 'Q: …  /  A: …'
+                : 'Policy rule the bot should cite…'
+        }
+        className="w-full min-h-[56px] text-sm px-2 py-1.5 border border-slate-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-botscrew-400"
+      />
+      <div className="flex items-center justify-end gap-2">
+        <button
+          onClick={onCancel}
+          className="px-2.5 py-1 text-xs text-slate-500 hover:text-ink-900"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={save}
+          disabled={!text.trim()}
+          className="px-3 py-1 text-xs font-medium bg-action-500 hover:bg-action-600 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Save note
+        </button>
+      </div>
     </div>
   );
 }

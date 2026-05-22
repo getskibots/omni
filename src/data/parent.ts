@@ -57,11 +57,58 @@ export const PARENT_MODEL_OPTIONS = [
   'claude-haiku-4-5',
 ] as const;
 
+export type KnowledgeNoteType = 'rule' | 'critical' | 'script' | 'faq';
+
+export interface KnowledgeNote {
+  id: string;
+  type: KnowledgeNoteType;
+  text: string;
+}
+
+export const NOTE_TYPE_META: Record<
+  KnowledgeNoteType,
+  { emoji: string; label: string; tone: string; renderLabel: string }
+> = {
+  critical: {
+    emoji: '⚠',
+    label: 'Critical',
+    tone: 'bg-amber-50 text-amber-800 border-amber-200',
+    renderLabel: 'CRITICAL',
+  },
+  rule: {
+    emoji: '📋',
+    label: 'Rule',
+    tone: 'bg-slate-100 text-slate-700 border-slate-200',
+    renderLabel: 'Rule',
+  },
+  script: {
+    emoji: '💬',
+    label: 'Script',
+    tone: 'bg-botscrew-50 text-botscrew-700 border-botscrew-200',
+    renderLabel: 'Script',
+  },
+  faq: {
+    emoji: '❓',
+    label: 'FAQ',
+    tone: 'bg-violet-50 text-violet-700 border-violet-200',
+    renderLabel: 'FAQ',
+  },
+};
+
+const NOTE_RENDER_ORDER: KnowledgeNoteType[] = ['critical', 'rule', 'script', 'faq'];
+
+export function sortNotes(notes: KnowledgeNote[]): KnowledgeNote[] {
+  return [...notes].sort(
+    (a, b) => NOTE_RENDER_ORDER.indexOf(a.type) - NOTE_RENDER_ORDER.indexOf(b.type),
+  );
+}
+
 export interface KnowledgeUrl {
   key: string;
   label: string;
   url: string;
   enabled: boolean;
+  notes?: KnowledgeNote[];
 }
 
 export interface KnowledgeGroup {
@@ -428,6 +475,14 @@ export function renderTemplate(t: ResortTemplate): string {
     lines.push(`${group.emoji} ${group.label}:`);
     enabled.forEach((e) => {
       lines.push(`- ${e.label}: ${e.url ? `[here](${e.url})` : 'see Custom Instructions'}`);
+      if (e.notes && e.notes.length > 0) {
+        sortNotes(e.notes).forEach((n) => {
+          const meta = NOTE_TYPE_META[n.type];
+          // Quote scripts so the bot knows to use verbatim phrasing
+          const text = n.type === 'script' ? `"${n.text}"` : n.text;
+          lines.push(`  ${meta.emoji} ${meta.renderLabel}: ${text}`);
+        });
+      }
     });
     lines.push('');
   });
@@ -477,7 +532,29 @@ export const jacksonHole: ParentSummary = {
         emoji: '🎫',
         label: 'Tickets',
         entries: [
-          { key: 'lift-tickets', label: 'Lift Tickets', url: 'https://www.jacksonhole.com/lift-tickets', enabled: true },
+          {
+            key: 'lift-tickets',
+            label: 'Lift Tickets',
+            url: 'https://www.jacksonhole.com/lift-tickets',
+            enabled: true,
+            notes: [
+              {
+                id: 'n1',
+                type: 'critical',
+                text: 'Never quote rates or prices. Direct guests to 855-679-7246 for pricing.',
+              },
+              {
+                id: 'n2',
+                type: 'rule',
+                text: 'No single-ride tram or gondola tickets. Use date-based logic for the correct link.',
+              },
+              {
+                id: 'n3',
+                type: 'script',
+                text: 'Ticket prices vary by date of visit and the best pricing is found online in advance of arrival.',
+              },
+            ],
+          },
           { key: 'deals-packages', label: 'Deals & Packages', url: '', enabled: false },
         ],
       },
@@ -486,7 +563,29 @@ export const jacksonHole: ParentSummary = {
         emoji: '🎟️',
         label: 'Season Passes',
         entries: [
-          { key: 'types-of-passes', label: 'Types of Season Passes', url: 'https://www.jacksonhole.com/season-pass', enabled: true },
+          {
+            key: 'types-of-passes',
+            label: 'Types of Season Passes',
+            url: 'https://www.jacksonhole.com/season-pass',
+            enabled: true,
+            notes: [
+              {
+                id: 'sp1',
+                type: 'critical',
+                text: 'Winter 2026–2027 in-person sale concluded. Online sales begin May 13, 2026.',
+              },
+              {
+                id: 'sp2',
+                type: 'rule',
+                text: 'Rates subject to change without notice; passes do sell out. No payment plans.',
+              },
+              {
+                id: 'sp3',
+                type: 'script',
+                text: 'Different passes at Jackson Hole offer unique benefits. Visit our Season Pass page for full details.',
+              },
+            ],
+          },
           { key: 'pass-sale-launch', label: 'Sale Launch Date', url: '', enabled: false },
           { key: 'tiered-pricing', label: 'Tiered Pricing', url: '', enabled: false },
         ],
@@ -517,8 +616,40 @@ export const jacksonHole: ParentSummary = {
         emoji: '📆',
         label: 'Refund Policies',
         entries: [
-          { key: 'refund-tickets', label: 'Tickets', url: '', enabled: false },
-          { key: 'refund-passes', label: 'Passes', url: '', enabled: false },
+          {
+            key: 'refund-tickets',
+            label: 'Tickets',
+            url: '',
+            enabled: true,
+            notes: [
+              {
+                id: 'rt1',
+                type: 'critical',
+                text: 'Day-of refunds only for full-mountain closures, not partial closures.',
+              },
+              { id: 'rt2', type: 'rule', text: '24-hour cancellation window for online tickets.' },
+              { id: 'rt3', type: 'rule', text: 'Day-of: non-refundable.' },
+              {
+                id: 'rt4',
+                type: 'script',
+                text: 'We can credit the ticket for a future visit if you cancel more than 24 hours out.',
+              },
+            ],
+          },
+          {
+            key: 'refund-passes',
+            label: 'Passes',
+            url: '',
+            enabled: true,
+            notes: [
+              { id: 'rp1', type: 'rule', text: 'No refunds after season starts.' },
+              {
+                id: 'rp2',
+                type: 'rule',
+                text: 'Buy-back program available — see Guest Services on arrival.',
+              },
+            ],
+          },
           { key: 'refund-lodging', label: 'Lodging', url: '', enabled: false },
           { key: 'refund-lessons-rentals', label: 'Lessons & Rentals', url: '', enabled: false },
         ],
