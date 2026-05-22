@@ -19,6 +19,8 @@ import {
   speakText,
   stopSpeaking,
   isApiKeyConfigured,
+  setApiKey,
+  clearApiKey,
   detectViolations,
   type ChatMessage,
   type TestChannel,
@@ -71,8 +73,23 @@ export default function TestVoiceModal({
   const [error, setError] = useState<string | null>(null);
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [autoPlay, setAutoPlay] = useState(channel === 'voice');
-  const apiConnected = isApiKeyConfigured();
+  const [apiConnected, setApiConnected] = useState(isApiKeyConfigured());
+  const [showKeyInput, setShowKeyInput] = useState(false);
+  const [keyInput, setKeyInput] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const saveKey = () => {
+    if (!keyInput.trim()) return;
+    setApiKey(keyInput);
+    setKeyInput('');
+    setShowKeyInput(false);
+    setApiConnected(true);
+  };
+
+  const forgetKey = () => {
+    clearApiKey();
+    setApiConnected(false);
+  };
 
   const isVoice = channel === 'voice';
   const ChannelIcon = isVoice ? Phone : MessageCircle;
@@ -208,15 +225,69 @@ export default function TestVoiceModal({
               <>
                 <CheckCircle2 className="h-3 w-3 text-success" strokeWidth={2} />
                 <span className="text-success font-medium">Live LLM</span>
+                <button
+                  onClick={forgetKey}
+                  className="ml-1 text-[10px] text-slate-400 hover:text-danger underline"
+                  title="Remove the key from this browser"
+                >
+                  forget key
+                </button>
               </>
             ) : (
               <>
                 <Sparkles className="h-3 w-3 text-slate-500" strokeWidth={2} />
                 <span className="text-slate-500 font-medium">Mock</span>
+                <button
+                  onClick={() => setShowKeyInput(true)}
+                  className="ml-1 text-[10px] text-botscrew-500 hover:underline font-medium"
+                >
+                  use real LLM →
+                </button>
               </>
             )}
           </span>
         </div>
+
+        {showKeyInput && !apiConnected && (
+          <div className="px-5 py-3 bg-botscrew-50 border-b border-botscrew-200 space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="text-xs text-ink-900 font-semibold">Paste OpenAI API key</div>
+              <button
+                onClick={() => setShowKeyInput(false)}
+                className="text-slate-400 hover:text-ink-900 text-xs"
+              >
+                cancel
+              </button>
+            </div>
+            <p className="text-[11px] text-slate-600 leading-relaxed">
+              Stored in this browser's localStorage only — never sent anywhere except OpenAI, never
+              committed. Click "forget key" anytime to remove it.
+            </p>
+            <div className="flex gap-2">
+              <input
+                type="password"
+                value={keyInput}
+                onChange={(e) => setKeyInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    saveKey();
+                  }
+                }}
+                autoFocus
+                placeholder="sk-proj-…"
+                className="flex-1 text-sm font-mono px-2 py-1.5 border border-slate-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-botscrew-400"
+              />
+              <button
+                onClick={saveKey}
+                disabled={!keyInput.trim()}
+                className="px-3 py-1.5 text-xs font-medium bg-botscrew-500 hover:bg-botscrew-600 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Save & connect
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Conversation */}
         <div ref={scrollRef} className="flex-1 overflow-y-auto p-5 space-y-3 bg-slate-50/40">
@@ -245,12 +316,18 @@ export default function TestVoiceModal({
         </div>
 
         {/* Mode notice */}
-        {!apiConnected && (
+        {!apiConnected && !showKeyInput && (
           <div className="px-5 py-2.5 bg-warn/10 border-t border-warn/20 flex items-center gap-2 text-xs text-warn">
             <Info className="h-3.5 w-3.5 shrink-0" strokeWidth={2} />
             <span>
-              Mock mode — set <code className="font-mono">VITE_OPENAI_API_KEY</code> in{' '}
-              <code className="font-mono">.env.local</code> for live LLM responses.
+              Mock mode — click{' '}
+              <button
+                onClick={() => setShowKeyInput(true)}
+                className="font-semibold underline hover:text-ink-900"
+              >
+                "use real LLM →"
+              </button>{' '}
+              above to paste your OpenAI key and connect.
               {isVoice && (
                 <>
                   {' '}TTS uses your browser's voice (real{' '}

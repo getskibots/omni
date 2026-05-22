@@ -7,10 +7,35 @@ export interface ChatMessage {
   content: string;
 }
 
-const OPENAI_KEY = import.meta.env.VITE_OPENAI_API_KEY as string | undefined;
+const LS_KEY = 'omni.openai_api_key';
+const ENV_KEY = import.meta.env.VITE_OPENAI_API_KEY as string | undefined;
+
+/** localStorage first (per-browser, set via the modal), env var as fallback (set via .env.local). */
+function getApiKey(): string | undefined {
+  if (typeof window !== 'undefined') {
+    const fromStorage = window.localStorage?.getItem(LS_KEY);
+    if (fromStorage && fromStorage.trim()) return fromStorage.trim();
+  }
+  if (ENV_KEY && ENV_KEY.trim()) return ENV_KEY.trim();
+  return undefined;
+}
+
+export function setApiKey(key: string): void {
+  if (typeof window === 'undefined') return;
+  if (key.trim()) {
+    window.localStorage.setItem(LS_KEY, key.trim());
+  } else {
+    window.localStorage.removeItem(LS_KEY);
+  }
+}
+
+export function clearApiKey(): void {
+  if (typeof window === 'undefined') return;
+  window.localStorage.removeItem(LS_KEY);
+}
 
 export function isApiKeyConfigured(): boolean {
-  return Boolean(OPENAI_KEY && OPENAI_KEY.trim());
+  return Boolean(getApiKey());
 }
 
 /**
@@ -146,7 +171,8 @@ export async function runChannelTest(
   channel: TestChannel,
   voiceStack?: VoiceStack,
 ): Promise<string> {
-  if (!isApiKeyConfigured()) {
+  const apiKey = getApiKey();
+  if (!apiKey) {
     await new Promise((r) => setTimeout(r, 600 + Math.random() * 400));
     return mockResponse(history, channel);
   }
@@ -158,7 +184,7 @@ export async function runChannelTest(
   const res = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${OPENAI_KEY}`,
+      Authorization: `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
