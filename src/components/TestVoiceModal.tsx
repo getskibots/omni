@@ -18,6 +18,7 @@ import {
   runChannelTest,
   speakText,
   stopSpeaking,
+  isSpeaking,
   isApiKeyConfigured,
   setApiKey,
   clearApiKey,
@@ -165,9 +166,7 @@ export default function TestVoiceModal({
   useEffect(() => {
     if (!playingId) return;
     const interval = setInterval(() => {
-      if (typeof window !== 'undefined' && !window.speechSynthesis?.speaking) {
-        setPlayingId(null);
-      }
+      if (!isSpeaking()) setPlayingId(null);
     }, 250);
     return () => clearInterval(interval);
   }, [playingId]);

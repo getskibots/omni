@@ -213,26 +213,87 @@ export const runVoiceTest = (
 ): Promise<string> => runChannelTest(systemPrompt, history, 'voice', voiceStack);
 
 /**
- * Speaks the text using the browser's SpeechSynthesis API. Voice quality varies
- * by browser/OS; real ash/alloy fidelity requires OpenAI TTS (backend).
+ * Speaks text using OpenAI's TTS API with the selected voice (ash, alloy, ballad,
+ * coral, echo, sage, shimmer, verse). Falls back to browser SpeechSynthesis when
+ * no API key is configured.
  */
-export function speakText(text: string, voiceName: string): void {
+
+let currentAudio: HTMLAudioElement | null = null;
+let currentBlobUrl: string | null = null;
+
+export async function speakText(text: string, voiceName: string): Promise<void> {
+  stopSpeaking();
+  const apiKey = getApiKey();
+
+  if (apiKey) {
+    try {
+      const res = await fetch('https://api.openai.com/v1/audio/speech', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini-tts',
+          voice: voiceName,
+          input: text,
+          response_format: 'mp3',
+        }),
+      });
+
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        currentBlobUrl = url;
+        const audio = new Audio(url);
+        currentAudio = audio;
+        await audio.play();
+        audio.onended = () => {
+          if (currentBlobUrl === url) {
+            URL.revokeObjectURL(url);
+            currentBlobUrl = null;
+            currentAudio = null;
+          }
+        };
+        return;
+      }
+      // Fall through to browser TTS on non-OK response
+      console.warn(`OpenAI TTS error ${res.status}; falling back to browser`);
+    } catch (e) {
+      console.warn('OpenAI TTS failed; falling back to browser:', e);
+    }
+  }
+
+  // Fallback: browser SpeechSynthesis (lower quality, no voice match)
   if (typeof window === 'undefined' || !window.speechSynthesis) return;
-  window.speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
   const voices = window.speechSynthesis.getVoices();
   const preferred =
-    voices.find((v) => v.name.toLowerCase().includes(voiceName.toLowerCase())) ??
     voices.find((v) => /Google US English|Samantha|Microsoft Aria|Karen|Daniel/.test(v.name)) ??
     voices.find((v) => v.lang.startsWith('en-US')) ??
     voices[0];
   if (preferred) u.voice = preferred;
   u.rate = 1.05;
-  u.pitch = 1.0;
   window.speechSynthesis.speak(u);
 }
 
 export function stopSpeaking(): void {
-  if (typeof window === 'undefined' || !window.speechSynthesis) return;
-  window.speechSynthesis.cancel();
+  if (currentAudio) {
+    currentAudio.pause();
+    currentAudio.currentTime = 0;
+    currentAudio = null;
+  }
+  if (currentBlobUrl) {
+    URL.revokeObjectURL(currentBlobUrl);
+    currentBlobUrl = null;
+  }
+  if (typeof window !== 'undefined' && window.speechSynthesis) {
+    window.speechSynthesis.cancel();
+  }
+}
+
+export function isSpeaking(): boolean {
+  if (currentAudio && !currentAudio.paused && !currentAudio.ended) return true;
+  if (typeof window !== 'undefined' && window.speechSynthesis?.speaking) return true;
+  return false;
 }
