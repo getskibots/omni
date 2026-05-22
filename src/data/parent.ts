@@ -476,8 +476,11 @@ export function renderTemplate(t: ResortTemplate): string {
     enabled.forEach((e) => {
       lines.push(`- ${e.label}: ${e.url ? `[here](${e.url})` : 'see Custom Instructions'}`);
       if (e.notes && e.notes.length > 0) {
-        e.notes.forEach((n) => {
-          lines.push(`  • ${n.text}`);
+        sortNotes(e.notes).forEach((n) => {
+          const meta = NOTE_TYPE_META[n.type];
+          // Quote scripts so the bot knows to use verbatim phrasing
+          const text = n.type === 'script' ? `"${n.text}"` : n.text;
+          lines.push(`  ${meta.emoji} ${meta.renderLabel}: ${text}`);
         });
       }
     });
