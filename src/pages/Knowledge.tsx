@@ -15,15 +15,12 @@ export default function Knowledge() {
   const [activeSection, setActiveSection] = useState<KnowledgeSection>('instructions');
 
   return (
-    <div className="px-8 py-6 max-w-7xl mx-auto">
+    <div className="px-8 py-8">
       <header className="mb-6">
-        <h1 className="text-2xl font-semibold text-ink-900">Knowledge</h1>
-        <p className="text-sm text-slate-500 mt-1">
-          Everything the bot is and knows. Instructions, text, files, and crawls.
-        </p>
+        <h1 className="text-3xl font-bold text-ink-900">Knowledge</h1>
       </header>
 
-      <div className="grid grid-cols-[220px_minmax(0,1fr)] gap-6 items-start">
+      <div className="grid grid-cols-[220px_minmax(0,1fr)] gap-8 items-start">
         <KnowledgeLayersRail active={activeSection} onSelect={setActiveSection} />
 
         <div>
