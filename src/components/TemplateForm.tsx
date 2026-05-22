@@ -1,5 +1,32 @@
 import { useMemo, useState } from 'react';
-import { Check, Sparkles, ChevronDown, ChevronRight, Lock, Plus, X } from 'lucide-react';
+import {
+  Check,
+  Sparkles,
+  ChevronDown,
+  ChevronRight,
+  Lock,
+  Plus,
+  X,
+  GripVertical,
+  Trash2,
+} from 'lucide-react';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import {
   jacksonHole,
   renderTemplate,
@@ -16,32 +43,35 @@ import type {
 } from '../data/parent';
 import { BOILERPLATE_SECTIONS } from '../data/template-boilerplate';
 
+function newId(prefix: string): string {
+  return `${prefix}-${Math.random().toString(36).slice(2, 9)}`;
+}
+
 export default function TemplateForm() {
   const [template, setTemplate] = useState<ResortTemplate>(jacksonHole.template);
   const [boilerplateOpen, setBoilerplateOpen] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
     () => new Set(template.knowledgeGroups.filter((g) => g.entries.some((e) => e.enabled)).map((g) => g.id)),
   );
+  const [addingSection, setAddingSection] = useState(false);
   const rendered = useMemo(() => renderTemplate(template), [template]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
 
   const updateField = <K extends keyof ResortTemplate>(key: K, value: ResortTemplate[K]) => {
     setTemplate({ ...template, [key]: value });
   };
 
-  const updateKnowledge = (
-    groupId: string,
-    entryKey: string,
-    patch: Partial<KnowledgeUrl>,
-  ) => {
+  const updateKnowledge = (groupId: string, entryKey: string, patch: Partial<KnowledgeUrl>) => {
     setTemplate({
       ...template,
       knowledgeGroups: template.knowledgeGroups.map((g) =>
         g.id !== groupId
           ? g
-          : {
-              ...g,
-              entries: g.entries.map((e) => (e.key === entryKey ? { ...e, ...patch } : e)),
-            },
+          : { ...g, entries: g.entries.map((e) => (e.key === entryKey ? { ...e, ...patch } : e)) },
       ),
     });
   };
@@ -73,6 +103,69 @@ export default function TemplateForm() {
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
+    });
+  };
+
+  const handleGroupDragEnd = (e: DragEndEvent) => {
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    const oldIndex = template.knowledgeGroups.findIndex((g) => g.id === active.id);
+    const newIndex = template.knowledgeGroups.findIndex((g) => g.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    setTemplate({
+      ...template,
+      knowledgeGroups: arrayMove(template.knowledgeGroups, oldIndex, newIndex),
+    });
+  };
+
+  const reorderEntries = (groupId: string, oldIndex: number, newIndex: number) => {
+    setTemplate({
+      ...template,
+      knowledgeGroups: template.knowledgeGroups.map((g) =>
+        g.id !== groupId ? g : { ...g, entries: arrayMove(g.entries, oldIndex, newIndex) },
+      ),
+    });
+  };
+
+  const addEntry = (groupId: string, label: string, url: string) => {
+    setTemplate({
+      ...template,
+      knowledgeGroups: template.knowledgeGroups.map((g) =>
+        g.id !== groupId
+          ? g
+          : {
+              ...g,
+              entries: [
+                ...g.entries,
+                { key: newId('entry'), label, url, enabled: true, notes: [] },
+              ],
+            },
+      ),
+    });
+  };
+
+  const removeEntry = (groupId: string, entryKey: string) => {
+    setTemplate({
+      ...template,
+      knowledgeGroups: template.knowledgeGroups.map((g) =>
+        g.id !== groupId ? g : { ...g, entries: g.entries.filter((e) => e.key !== entryKey) },
+      ),
+    });
+  };
+
+  const addGroup = (emoji: string, label: string) => {
+    const id = newId('group');
+    setTemplate({
+      ...template,
+      knowledgeGroups: [...template.knowledgeGroups, { id, emoji, label, entries: [] }],
+    });
+    setExpandedGroups((prev) => new Set(prev).add(id));
+  };
+
+  const removeGroup = (groupId: string) => {
+    setTemplate({
+      ...template,
+      knowledgeGroups: template.knowledgeGroups.filter((g) => g.id !== groupId),
     });
   };
 
@@ -138,20 +231,58 @@ export default function TemplateForm() {
       <div>
         <div className="text-sm font-semibold text-ink-900 mb-1">📚 Resort Knowledge Sections</div>
         <p className="text-xs text-slate-500 mb-3">
-          Verified URLs by category. Click a header to expand. Disabled rows are skipped at assembly.
+          Drag sections and entries to reorder. Use <strong>+ Add entry</strong> for a new line in a
+          group, or <strong>+ Add section</strong> below to create a new group.
         </p>
-        <div className="space-y-2">
-          {template.knowledgeGroups.map((group) => (
-            <KnowledgeGroupCard
-              key={group.id}
-              group={group}
-              expanded={expandedGroups.has(group.id)}
-              onToggle={() => toggleGroup(group.id)}
-              onUpdate={(entryKey, patch) => updateKnowledge(group.id, entryKey, patch)}
-              onAddNote={(entryKey, note) => addNote(group.id, entryKey, note)}
-              onRemoveNote={(entryKey, noteId) => removeNote(group.id, entryKey, noteId)}
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleGroupDragEnd}
+        >
+          <SortableContext
+            items={template.knowledgeGroups.map((g) => g.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            <div className="space-y-2">
+              {template.knowledgeGroups.map((group) => (
+                <SortableGroupCard
+                  key={group.id}
+                  group={group}
+                  expanded={expandedGroups.has(group.id)}
+                  onToggle={() => toggleGroup(group.id)}
+                  onUpdate={(entryKey, patch) => updateKnowledge(group.id, entryKey, patch)}
+                  onAddNote={(entryKey, note) => addNote(group.id, entryKey, note)}
+                  onRemoveNote={(entryKey, noteId) => removeNote(group.id, entryKey, noteId)}
+                  onReorderEntries={(oldIndex, newIndex) =>
+                    reorderEntries(group.id, oldIndex, newIndex)
+                  }
+                  onAddEntry={(label, url) => addEntry(group.id, label, url)}
+                  onRemoveEntry={(entryKey) => removeEntry(group.id, entryKey)}
+                  onRemoveGroup={() => removeGroup(group.id)}
+                  sensors={sensors}
+                />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
+
+        <div className="mt-3">
+          {addingSection ? (
+            <NewSectionEditor
+              onSave={(emoji, label) => {
+                addGroup(emoji, label);
+                setAddingSection(false);
+              }}
+              onCancel={() => setAddingSection(false)}
             />
-          ))}
+          ) : (
+            <button
+              onClick={() => setAddingSection(true)}
+              className="inline-flex items-center gap-1.5 text-sm text-botscrew-500 hover:text-botscrew-600 font-medium px-2 py-1.5"
+            >
+              <Plus className="h-4 w-4" strokeWidth={2} /> Add section
+            </button>
+          )}
         </div>
       </div>
 
@@ -276,6 +407,37 @@ function BoilerplateSection({
   );
 }
 
+function SortableGroupCard(props: {
+  group: KnowledgeGroup;
+  expanded: boolean;
+  onToggle: () => void;
+  onUpdate: (entryKey: string, patch: Partial<KnowledgeUrl>) => void;
+  onAddNote: (entryKey: string, note: KnowledgeNote) => void;
+  onRemoveNote: (entryKey: string, noteId: string) => void;
+  onReorderEntries: (oldIndex: number, newIndex: number) => void;
+  onAddEntry: (label: string, url: string) => void;
+  onRemoveEntry: (entryKey: string) => void;
+  onRemoveGroup: () => void;
+  sensors: ReturnType<typeof useSensors>;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: props.group.id,
+  });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+  return (
+    <div ref={setNodeRef} style={style}>
+      <KnowledgeGroupCard
+        {...props}
+        dragHandleProps={{ ...attributes, ...listeners }}
+      />
+    </div>
+  );
+}
+
 function KnowledgeGroupCard({
   group,
   expanded,
@@ -283,6 +445,12 @@ function KnowledgeGroupCard({
   onUpdate,
   onAddNote,
   onRemoveNote,
+  onReorderEntries,
+  onAddEntry,
+  onRemoveEntry,
+  onRemoveGroup,
+  dragHandleProps,
+  sensors,
 }: {
   group: KnowledgeGroup;
   expanded: boolean;
@@ -290,44 +458,132 @@ function KnowledgeGroupCard({
   onUpdate: (entryKey: string, patch: Partial<KnowledgeUrl>) => void;
   onAddNote: (entryKey: string, note: KnowledgeNote) => void;
   onRemoveNote: (entryKey: string, noteId: string) => void;
+  onReorderEntries: (oldIndex: number, newIndex: number) => void;
+  onAddEntry: (label: string, url: string) => void;
+  onRemoveEntry: (entryKey: string) => void;
+  onRemoveGroup: () => void;
+  dragHandleProps: Record<string, unknown>;
+  sensors: ReturnType<typeof useSensors>;
 }) {
+  const [addingEntry, setAddingEntry] = useState(false);
   const enabledCount = group.entries.filter((e) => e.enabled).length;
   const totalNotes = group.entries.reduce((sum, e) => sum + (e.notes?.length ?? 0), 0);
+
+  const handleEntryDragEnd = (e: DragEndEvent) => {
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    const oldIndex = group.entries.findIndex((entry) => entry.key === active.id);
+    const newIndex = group.entries.findIndex((entry) => entry.key === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    onReorderEntries(oldIndex, newIndex);
+  };
+
   return (
     <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
-      <button
-        onClick={onToggle}
-        className="w-full text-left px-4 py-2.5 flex items-center justify-between hover:bg-slate-50"
-      >
-        <div className="flex items-center gap-2">
-          {expanded ? (
-            <ChevronDown className="h-4 w-4 text-slate-400" strokeWidth={2} />
-          ) : (
-            <ChevronRight className="h-4 w-4 text-slate-400" strokeWidth={2} />
-          )}
-          <span className="text-sm font-semibold text-ink-900">
-            <span className="mr-1.5">{group.emoji}</span>
-            {group.label}
+      <div className="flex items-center group/header">
+        <button
+          {...dragHandleProps}
+          className="px-2 py-2.5 cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-500 opacity-0 group-hover/header:opacity-100 transition"
+          title="Drag to reorder"
+        >
+          <GripVertical className="h-4 w-4" strokeWidth={2} />
+        </button>
+        <button
+          onClick={onToggle}
+          className="flex-1 text-left py-2.5 pr-3 flex items-center justify-between hover:bg-slate-50"
+        >
+          <div className="flex items-center gap-2">
+            {expanded ? (
+              <ChevronDown className="h-4 w-4 text-slate-400" strokeWidth={2} />
+            ) : (
+              <ChevronRight className="h-4 w-4 text-slate-400" strokeWidth={2} />
+            )}
+            <span className="text-sm font-semibold text-ink-900">
+              <span className="mr-1.5">{group.emoji}</span>
+              {group.label}
+            </span>
+          </div>
+          <span className="text-xs text-slate-500">
+            {enabledCount} of {group.entries.length} enabled
+            {totalNotes > 0 && <span className="ml-2 text-slate-400">· {totalNotes} notes</span>}
           </span>
-        </div>
-        <span className="text-xs text-slate-500">
-          {enabledCount} of {group.entries.length} enabled
-          {totalNotes > 0 && <span className="ml-2 text-slate-400">· {totalNotes} notes</span>}
-        </span>
-      </button>
+        </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            if (confirm(`Delete the "${group.label}" section?`)) onRemoveGroup();
+          }}
+          className="px-2 py-2.5 text-slate-300 hover:text-danger opacity-0 group-hover/header:opacity-100 transition"
+          title="Delete section"
+        >
+          <Trash2 className="h-4 w-4" strokeWidth={2} />
+        </button>
+      </div>
       {expanded && (
         <div className="border-t border-slate-100 p-3 space-y-3">
-          {group.entries.map((e) => (
-            <EntryRow
-              key={e.key}
-              entry={e}
-              onUpdate={(patch) => onUpdate(e.key, patch)}
-              onAddNote={(note) => onAddNote(e.key, note)}
-              onRemoveNote={(noteId) => onRemoveNote(e.key, noteId)}
+          {group.entries.length > 0 && (
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleEntryDragEnd}
+            >
+              <SortableContext
+                items={group.entries.map((e) => e.key)}
+                strategy={verticalListSortingStrategy}
+              >
+                {group.entries.map((e) => (
+                  <SortableEntryRow
+                    key={e.key}
+                    entry={e}
+                    onUpdate={(patch) => onUpdate(e.key, patch)}
+                    onAddNote={(note) => onAddNote(e.key, note)}
+                    onRemoveNote={(noteId) => onRemoveNote(e.key, noteId)}
+                    onRemove={() => onRemoveEntry(e.key)}
+                  />
+                ))}
+              </SortableContext>
+            </DndContext>
+          )}
+          {addingEntry ? (
+            <NewEntryEditor
+              onSave={(label, url) => {
+                onAddEntry(label, url);
+                setAddingEntry(false);
+              }}
+              onCancel={() => setAddingEntry(false)}
             />
-          ))}
+          ) : (
+            <button
+              onClick={() => setAddingEntry(true)}
+              className="inline-flex items-center gap-1.5 text-xs text-botscrew-500 hover:text-botscrew-600 font-medium pl-1 py-0.5"
+            >
+              <Plus className="h-3.5 w-3.5" strokeWidth={2} /> Add entry
+            </button>
+          )}
         </div>
       )}
+    </div>
+  );
+}
+
+function SortableEntryRow(props: {
+  entry: KnowledgeUrl;
+  onUpdate: (patch: Partial<KnowledgeUrl>) => void;
+  onAddNote: (note: KnowledgeNote) => void;
+  onRemoveNote: (noteId: string) => void;
+  onRemove: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: props.entry.key,
+  });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+  return (
+    <div ref={setNodeRef} style={style}>
+      <EntryRow {...props} dragHandleProps={{ ...attributes, ...listeners }} />
     </div>
   );
 }
@@ -337,16 +593,27 @@ function EntryRow({
   onUpdate,
   onAddNote,
   onRemoveNote,
+  onRemove,
+  dragHandleProps,
 }: {
   entry: KnowledgeUrl;
   onUpdate: (patch: Partial<KnowledgeUrl>) => void;
   onAddNote: (note: KnowledgeNote) => void;
   onRemoveNote: (noteId: string) => void;
+  onRemove: () => void;
+  dragHandleProps: Record<string, unknown>;
 }) {
   const [adding, setAdding] = useState(false);
   return (
-    <div className="space-y-1.5">
-      <div className="grid grid-cols-[24px_180px_minmax(0,1fr)] items-center gap-3">
+    <div className="group/row space-y-1.5">
+      <div className="grid grid-cols-[16px_24px_180px_minmax(0,1fr)_24px] items-center gap-2">
+        <button
+          {...dragHandleProps}
+          className="cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-500 opacity-0 group-hover/row:opacity-100 transition"
+          title="Drag to reorder"
+        >
+          <GripVertical className="h-3.5 w-3.5" strokeWidth={2} />
+        </button>
         <Toggle checked={entry.enabled} onChange={(v) => onUpdate({ enabled: v })} />
         <span className={`text-sm ${entry.enabled ? 'text-ink-900' : 'text-slate-400'}`}>
           {entry.label}
@@ -363,10 +630,19 @@ function EntryRow({
               : 'border-slate-100 bg-slate-50 text-slate-400'
           } focus:outline-none focus:ring-2 focus:ring-botscrew-400`}
         />
+        <button
+          onClick={() => {
+            if (confirm(`Delete "${entry.label}"?`)) onRemove();
+          }}
+          className="text-slate-300 hover:text-danger opacity-0 group-hover/row:opacity-100 transition"
+          title="Delete entry"
+        >
+          <Trash2 className="h-3.5 w-3.5" strokeWidth={2} />
+        </button>
       </div>
 
       {entry.enabled && (
-        <div className="ml-[36px] space-y-1.5">
+        <div className="ml-[58px] space-y-1.5">
           {entry.notes &&
             entry.notes.length > 0 &&
             sortNotes(entry.notes).map((n) => (
@@ -390,6 +666,118 @@ function EntryRow({
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+function NewEntryEditor({
+  onSave,
+  onCancel,
+}: {
+  onSave: (label: string, url: string) => void;
+  onCancel: () => void;
+}) {
+  const [label, setLabel] = useState('');
+  const [url, setUrl] = useState('');
+  const save = () => {
+    const l = label.trim();
+    if (!l) return;
+    onSave(l, url.trim());
+  };
+  return (
+    <div className="bg-slate-50 border border-slate-200 rounded-md p-2.5 space-y-2">
+      <div className="grid grid-cols-[180px_minmax(0,1fr)] gap-2">
+        <input
+          type="text"
+          autoFocus
+          value={label}
+          onChange={(e) => setLabel(e.target.value)}
+          placeholder="Label (e.g. Lift Tickets)"
+          className="text-sm px-2 py-1.5 border border-slate-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-botscrew-400"
+        />
+        <input
+          type="text"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          placeholder="https://… (optional)"
+          className="text-sm font-mono px-2 py-1.5 border border-slate-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-botscrew-400"
+        />
+      </div>
+      <div className="flex items-center justify-end gap-2">
+        <button onClick={onCancel} className="px-2.5 py-1 text-xs text-slate-500 hover:text-ink-900">
+          Cancel
+        </button>
+        <button
+          onClick={save}
+          disabled={!label.trim()}
+          className="px-3 py-1 text-xs font-medium bg-action-500 hover:bg-action-600 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Add entry
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function NewSectionEditor({
+  onSave,
+  onCancel,
+}: {
+  onSave: (emoji: string, label: string) => void;
+  onCancel: () => void;
+}) {
+  const [emoji, setEmoji] = useState('📌');
+  const [label, setLabel] = useState('');
+  const save = () => {
+    const l = label.trim();
+    if (!l) return;
+    onSave(emoji.trim() || '📌', l);
+  };
+  return (
+    <div className="bg-slate-50 border border-slate-200 rounded-md p-3 space-y-2 max-w-md">
+      <div className="grid grid-cols-[64px_minmax(0,1fr)] gap-2">
+        <div>
+          <label className="block text-[11px] text-slate-500 mb-1">Emoji</label>
+          <input
+            type="text"
+            value={emoji}
+            onChange={(e) => setEmoji(e.target.value)}
+            placeholder="📌"
+            className="w-full text-center text-base px-2 py-1.5 border border-slate-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-botscrew-400"
+          />
+        </div>
+        <div>
+          <label className="block text-[11px] text-slate-500 mb-1">Section name</label>
+          <input
+            type="text"
+            autoFocus
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            placeholder="e.g. Equestrian Activities"
+            className="w-full text-sm px-2 py-1.5 border border-slate-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-botscrew-400"
+          />
+        </div>
+      </div>
+      <div className="flex items-center justify-between">
+        <span className="text-[11px] text-slate-400">
+          Use your OS emoji picker (⌘+Ctrl+Space / Win+.) for any icon.
+        </span>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onCancel}
+            className="px-2.5 py-1 text-xs text-slate-500 hover:text-ink-900"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={save}
+            disabled={!label.trim()}
+            className="px-3 py-1 text-xs font-medium bg-action-500 hover:bg-action-600 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Add section
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
