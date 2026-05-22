@@ -9,6 +9,7 @@ import {
   X,
   GripVertical,
   Trash2,
+  Search,
 } from 'lucide-react';
 import {
   DndContext,
@@ -53,11 +54,27 @@ function newId(prefix: string): string {
 export default function TemplateForm() {
   const [template, setTemplate] = useState<ResortTemplate>(jacksonHole.template);
   const [boilerplateOpen, setBoilerplateOpen] = useState(false);
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
-    () => new Set(template.knowledgeGroups.filter((g) => g.entries.some((e) => e.enabled)).map((g) => g.id)),
-  );
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [addingSection, setAddingSection] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const rendered = useMemo(() => renderTemplate(template), [template]);
+
+  const trimmedSearch = searchQuery.trim().toLowerCase();
+  const filteredGroups = useMemo(() => {
+    if (!trimmedSearch) return template.knowledgeGroups;
+    return template.knowledgeGroups.filter((g) => {
+      if (g.label.toLowerCase().includes(trimmedSearch)) return true;
+      return g.entries.some(
+        (e) =>
+          e.label.toLowerCase().includes(trimmedSearch) ||
+          (e.notes ?? []).some((n) => n.text.toLowerCase().includes(trimmedSearch)),
+      );
+    });
+  }, [trimmedSearch, template.knowledgeGroups]);
+
+  // When searching, force-expand all matching groups so results are visible
+  const isGroupExpanded = (id: string) =>
+    trimmedSearch ? true : expandedGroups.has(id);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -255,26 +272,59 @@ export default function TemplateForm() {
       </Section>
 
       <div>
-        <div className="text-sm font-semibold text-ink-900 mb-1">📚 Resort Knowledge Sections</div>
-        <p className="text-xs text-slate-500 mb-3">
-          Drag sections and entries to reorder. Use <strong>+ Add entry</strong> for a new line in a
-          group, or <strong>+ Add section</strong> below to create a new group.
-        </p>
+        <div className="flex items-end justify-between mb-1">
+          <div>
+            <div className="text-sm font-semibold text-ink-900">📚 Resort Knowledge Sections</div>
+            <p className="text-xs text-slate-500">
+              Drag sections and entries to reorder. Use{' '}
+              <strong>+ Add entry</strong> for a new line, or <strong>+ Add section</strong> below.
+            </p>
+          </div>
+          <div className="relative">
+            <Search
+              className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none"
+              strokeWidth={2}
+            />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search sections, entries, notes…"
+              className="text-sm pl-7 pr-7 py-1.5 border border-slate-200 rounded-md bg-white w-64 focus:outline-none focus:ring-2 focus:ring-botscrew-400"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-ink-900"
+                title="Clear search"
+              >
+                <X className="h-3.5 w-3.5" strokeWidth={2} />
+              </button>
+            )}
+          </div>
+        </div>
+        {trimmedSearch && (
+          <div className="text-xs text-slate-500 mb-2">
+            {filteredGroups.length === 0
+              ? `No sections match "${searchQuery}"`
+              : `Showing ${filteredGroups.length} section${filteredGroups.length === 1 ? '' : 's'} matching "${searchQuery}"`}
+          </div>
+        )}
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
           onDragEnd={handleGroupDragEnd}
         >
           <SortableContext
-            items={template.knowledgeGroups.map((g) => g.id)}
+            items={filteredGroups.map((g) => g.id)}
             strategy={verticalListSortingStrategy}
           >
             <div className="space-y-2">
-              {template.knowledgeGroups.map((group) => (
+              {filteredGroups.map((group) => (
                 <SortableGroupCard
                   key={group.id}
                   group={group}
-                  expanded={expandedGroups.has(group.id)}
+                  expanded={isGroupExpanded(group.id)}
                   onToggle={() => toggleGroup(group.id)}
                   onUpdate={(entryKey, patch) => updateKnowledge(group.id, entryKey, patch)}
                   onAddNote={(entryKey, note) => addNote(group.id, entryKey, note)}
