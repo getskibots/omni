@@ -1,20 +1,36 @@
 import { useMemo, useState } from 'react';
-import { Check, Sparkles } from 'lucide-react';
+import { Check, Sparkles, ChevronDown, ChevronRight, Lock } from 'lucide-react';
 import { jacksonHole, renderTemplate, INDUSTRY_LABELS } from '../data/parent';
-import type { ResortTemplate } from '../data/parent';
+import type { ResortTemplate, KnowledgeGroup } from '../data/parent';
+import { BOILERPLATE_SECTIONS } from '../data/template-boilerplate';
 
 export default function TemplateForm() {
   const [template, setTemplate] = useState<ResortTemplate>(jacksonHole.template);
+  const [boilerplateOpen, setBoilerplateOpen] = useState(false);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
+    () => new Set(template.knowledgeGroups.filter((g) => g.entries.some((e) => e.enabled)).map((g) => g.id)),
+  );
   const rendered = useMemo(() => renderTemplate(template), [template]);
 
   const updateField = <K extends keyof ResortTemplate>(key: K, value: ResortTemplate[K]) => {
     setTemplate({ ...template, [key]: value });
   };
 
-  const updateKnowledge = (key: string, patch: Partial<{ url: string; enabled: boolean }>) => {
+  const updateKnowledge = (
+    groupId: string,
+    entryKey: string,
+    patch: Partial<{ url: string; enabled: boolean }>,
+  ) => {
     setTemplate({
       ...template,
-      knowledge: template.knowledge.map((k) => (k.key === key ? { ...k, ...patch } : k)),
+      knowledgeGroups: template.knowledgeGroups.map((g) =>
+        g.id !== groupId
+          ? g
+          : {
+              ...g,
+              entries: g.entries.map((e) => (e.key === entryKey ? { ...e, ...patch } : e)),
+            },
+      ),
     });
   };
 
@@ -22,6 +38,15 @@ export default function TemplateForm() {
     setTemplate({
       ...template,
       flows: template.flows.map((f) => (f.key === key ? { ...f, enabled } : f)),
+    });
+  };
+
+  const toggleGroup = (id: string) => {
+    setExpandedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
     });
   };
 
@@ -36,7 +61,7 @@ export default function TemplateForm() {
         </span>
       </div>
 
-      <Section title="Resort Identity">
+      <Section title="🏔️ Resort Identity">
         <div className="grid grid-cols-2 gap-3">
           <Field
             label="Resort Name"
@@ -61,39 +86,14 @@ export default function TemplateForm() {
         </div>
       </Section>
 
-      <Section title="Knowledge Categories" subtitle="Verified resort URLs by category. Disabled rows are skipped at assembly.">
-        <div className="space-y-1.5">
-          {template.knowledge.map((k) => (
-            <div
-              key={k.key}
-              className="grid grid-cols-[24px_180px_minmax(0,1fr)] items-center gap-3 py-1"
-            >
-              <Toggle
-                checked={k.enabled}
-                onChange={(v) => updateKnowledge(k.key, { enabled: v })}
-              />
-              <span className={`text-sm ${k.enabled ? 'text-ink-900' : 'text-slate-400'}`}>
-                {k.label}
-              </span>
-              <input
-                type="text"
-                value={k.url}
-                onChange={(e) => updateKnowledge(k.key, { url: e.target.value })}
-                disabled={!k.enabled}
-                placeholder={k.enabled ? 'https://…' : ''}
-                className={`text-sm font-mono px-2 py-1.5 rounded-md border ${
-                  k.enabled
-                    ? 'border-slate-200 bg-white text-ink-900'
-                    : 'border-slate-100 bg-slate-50 text-slate-400'
-                } focus:outline-none focus:ring-2 focus:ring-botscrew-400`}
-              />
-            </div>
-          ))}
-        </div>
-      </Section>
+      <BoilerplateSection
+        open={boilerplateOpen}
+        onToggle={() => setBoilerplateOpen(!boilerplateOpen)}
+        template={template}
+      />
 
       <Section
-        title="Realtime Data Flows"
+        title="⚡ Realtime Data Flows"
         subtitle="Enable the flows your bot should call for live data. Each flow corresponds to a tool the model can invoke mid-conversation."
       >
         <div className="grid grid-cols-2 gap-2">
@@ -109,7 +109,25 @@ export default function TemplateForm() {
         </div>
       </Section>
 
-      <Section title="Multi-Pass Programs" subtitle="Partner passes accepted at this resort.">
+      <div>
+        <div className="text-sm font-semibold text-ink-900 mb-1">📚 Resort Knowledge Sections</div>
+        <p className="text-xs text-slate-500 mb-3">
+          Verified URLs by category. Click a header to expand. Disabled rows are skipped at assembly.
+        </p>
+        <div className="space-y-2">
+          {template.knowledgeGroups.map((group) => (
+            <KnowledgeGroupCard
+              key={group.id}
+              group={group}
+              expanded={expandedGroups.has(group.id)}
+              onToggle={() => toggleGroup(group.id)}
+              onUpdate={(entryKey, patch) => updateKnowledge(group.id, entryKey, patch)}
+            />
+          ))}
+        </div>
+      </div>
+
+      <Section title="🎟 Multi-Pass Programs" subtitle="Partner passes accepted at this resort.">
         <div className="space-y-2">
           <div className="flex items-center gap-4">
             <Radio
@@ -165,18 +183,134 @@ export default function TemplateForm() {
           <div>
             <div className="text-sm font-semibold text-ink-900">Generated prompt</div>
             <p className="text-xs text-slate-500 mt-0.5">
-              Auto-assembled from the form above. Toggles, URLs, and partners reshape this in
-              real time. Concatenated with Customization at push.
+              Auto-assembled from the form above. Concatenated with Custom Instructions at push.
             </p>
           </div>
           <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border border-slate-200 bg-white text-slate-600">
             {rendered.length.toLocaleString()} chars
           </span>
         </div>
-        <pre className="p-4 text-xs font-mono text-ink-700 whitespace-pre-wrap leading-relaxed overflow-x-auto">
+        <pre className="p-4 text-xs font-mono text-ink-700 whitespace-pre-wrap leading-relaxed overflow-x-auto max-h-96 overflow-y-auto">
           {rendered}
         </pre>
       </div>
+    </div>
+  );
+}
+
+function BoilerplateSection({
+  open,
+  onToggle,
+  template,
+}: {
+  open: boolean;
+  onToggle: () => void;
+  template: ResortTemplate;
+}) {
+  return (
+    <div className="bg-white border border-slate-200 rounded-xl shadow-card overflow-hidden">
+      <button
+        onClick={onToggle}
+        className="w-full text-left px-4 py-3 flex items-center justify-between hover:bg-slate-50"
+      >
+        <div className="flex items-center gap-2">
+          {open ? (
+            <ChevronDown className="h-4 w-4 text-slate-400" strokeWidth={2} />
+          ) : (
+            <ChevronRight className="h-4 w-4 text-slate-400" strokeWidth={2} />
+          )}
+          <span className="text-sm font-semibold text-ink-900">Template Boilerplate</span>
+          <span className="inline-flex items-center gap-1 text-[11px] text-slate-500 ml-2">
+            <Lock className="h-3 w-3" strokeWidth={2} />
+            GSB-managed · {BOILERPLATE_SECTIONS.length} sections
+          </span>
+        </div>
+        <span className="text-xs text-slate-400">
+          {open ? 'Collapse' : 'Expand to view canonical sections'}
+        </span>
+      </button>
+      {open && (
+        <div className="border-t border-slate-100 divide-y divide-slate-100">
+          {BOILERPLATE_SECTIONS.map((section) => (
+            <div key={section.title} className="px-4 py-3">
+              <div className="text-sm font-semibold text-ink-900 mb-1.5">
+                <span className="mr-1.5">{section.emoji}</span>
+                {section.title}
+              </div>
+              <pre className="text-xs font-mono text-slate-600 whitespace-pre-wrap leading-relaxed">
+                {section.body(template)}
+              </pre>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function KnowledgeGroupCard({
+  group,
+  expanded,
+  onToggle,
+  onUpdate,
+}: {
+  group: KnowledgeGroup;
+  expanded: boolean;
+  onToggle: () => void;
+  onUpdate: (entryKey: string, patch: Partial<{ url: string; enabled: boolean }>) => void;
+}) {
+  const enabledCount = group.entries.filter((e) => e.enabled).length;
+  return (
+    <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
+      <button
+        onClick={onToggle}
+        className="w-full text-left px-4 py-2.5 flex items-center justify-between hover:bg-slate-50"
+      >
+        <div className="flex items-center gap-2">
+          {expanded ? (
+            <ChevronDown className="h-4 w-4 text-slate-400" strokeWidth={2} />
+          ) : (
+            <ChevronRight className="h-4 w-4 text-slate-400" strokeWidth={2} />
+          )}
+          <span className="text-sm font-semibold text-ink-900">
+            <span className="mr-1.5">{group.emoji}</span>
+            {group.label}
+          </span>
+        </div>
+        <span className="text-xs text-slate-500">
+          {enabledCount} of {group.entries.length} enabled
+        </span>
+      </button>
+      {expanded && (
+        <div className="border-t border-slate-100 p-3 space-y-1.5">
+          {group.entries.map((e) => (
+            <div
+              key={e.key}
+              className="grid grid-cols-[24px_180px_minmax(0,1fr)] items-center gap-3 py-0.5"
+            >
+              <Toggle
+                checked={e.enabled}
+                onChange={(v) => onUpdate(e.key, { enabled: v })}
+              />
+              <span className={`text-sm ${e.enabled ? 'text-ink-900' : 'text-slate-400'}`}>
+                {e.label}
+              </span>
+              <input
+                type="text"
+                value={e.url}
+                onChange={(ev) => onUpdate(e.key, { url: ev.target.value })}
+                disabled={!e.enabled}
+                placeholder={e.enabled ? 'https://…' : ''}
+                className={`text-sm font-mono px-2 py-1 rounded-md border ${
+                  e.enabled
+                    ? 'border-slate-200 bg-white text-ink-900'
+                    : 'border-slate-100 bg-slate-50 text-slate-400'
+                } focus:outline-none focus:ring-2 focus:ring-botscrew-400`}
+              />
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

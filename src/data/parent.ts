@@ -64,6 +64,13 @@ export interface KnowledgeUrl {
   enabled: boolean;
 }
 
+export interface KnowledgeGroup {
+  id: string;
+  emoji: string;
+  label: string;
+  entries: KnowledgeUrl[];
+}
+
 export interface RealtimeFlow {
   key: string;
   label: string;
@@ -105,7 +112,7 @@ export interface ResortTemplate {
   officialUrl: string;
   contactEmail: string;
   contactPhone: string;
-  knowledge: KnowledgeUrl[];
+  knowledgeGroups: KnowledgeGroup[];
   flows: RealtimeFlow[];
   multiPass: { hasPartners: boolean; partners: string[] };
 }
@@ -381,39 +388,56 @@ Tool Failure Handling:
 Tone:
 • Slightly more formal than chat, still warm. Match the guest's register — formal if they're formal, casual if they're casual.`;
 
+// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+import { BOILERPLATE_SECTIONS } from './template-boilerplate';
+
 export function renderTemplate(t: ResortTemplate): string {
   const lines: string[] = [];
 
+  // Header
   lines.push(`Resort: ${t.resortName}`);
   if (t.officialUrl) lines.push(`Official Website: ${t.officialUrl}`);
-  if (t.contactEmail || t.contactPhone) {
-    const parts = [t.contactEmail, t.contactPhone].filter(Boolean);
-    lines.push(`Contact: ${parts.join(' · ')}`);
-  }
   lines.push('');
 
-  const enabledKnowledge = t.knowledge.filter((k) => k.enabled);
-  if (enabledKnowledge.length > 0) {
-    lines.push('Resort Knowledge — verified URLs by category:');
-    enabledKnowledge.forEach((k) => {
-      lines.push(k.url ? `• ${k.label}: ${k.url}` : `• ${k.label}: see Customization`);
+  // Boilerplate sections (Purpose, Role, Behavior Pillars, etc.)
+  BOILERPLATE_SECTIONS.forEach((section) => {
+    lines.push(`${section.emoji} ${section.title}`);
+    lines.push(section.body(t));
+    // Append enabled flow list to the Realtime section
+    if (section.title === 'Realtime Data Tool Usage') {
+      const enabled = t.flows.filter((f) => f.enabled);
+      if (enabled.length > 0) {
+        enabled.forEach((f) => {
+          lines.push(`- Use ${f.label} for the matching topic.`);
+        });
+      }
+    }
+    lines.push('');
+  });
+
+  // Resort Knowledge Sections
+  lines.push('📚 Resort Knowledge Sections');
+  lines.push(
+    'Use the following knowledge categories when answering guest questions. Each item contains a verified link to the relevant page on the official resort website.',
+  );
+  lines.push('');
+
+  t.knowledgeGroups.forEach((group) => {
+    const enabled = group.entries.filter((e) => e.enabled);
+    if (enabled.length === 0) return;
+    lines.push(`${group.emoji} ${group.label}:`);
+    enabled.forEach((e) => {
+      lines.push(`- ${e.label}: ${e.url ? `[here](${e.url})` : 'see Custom Instructions'}`);
     });
     lines.push('');
-  }
+  });
 
-  const enabledFlows = t.flows.filter((f) => f.enabled);
-  if (enabledFlows.length > 0) {
-    lines.push('Realtime Data Flows — call when relevant:');
-    enabledFlows.forEach((f) => {
-      lines.push(`• ${f.label}`);
-    });
-    lines.push('');
-  }
-
+  // Multi-Pass
+  lines.push('🎟 Pass Programs');
   if (t.multiPass.hasPartners && t.multiPass.partners.length > 0) {
-    lines.push(`Multi-Pass Programs: ${t.multiPass.partners.join(', ')}`);
+    lines.push(`Multi-Resort Access: ${t.multiPass.partners.join(', ')}`);
   } else {
-    lines.push('Multi-Pass Programs: No partnership passes');
+    lines.push('Multi-Resort Access: No pass partners available');
   }
 
   return lines.join('\n');
@@ -433,22 +457,193 @@ export const jacksonHole: ParentSummary = {
     officialUrl: 'www.jacksonhole.com',
     contactEmail: 'info@jacksonhole.com',
     contactPhone: '855-679-7246',
-    knowledge: [
-      { key: 'hours', label: 'Hours of operation', url: '', enabled: true },
-      { key: 'contact', label: 'Contact', url: 'https://www.jacksonhole.com/contact', enabled: true },
-      { key: 'location', label: 'Location', url: '', enabled: true },
-      { key: 'trail-maps', label: 'Trail Maps & Difficulty', url: 'https://www.jacksonhole.com/maps/mountain-winter', enabled: true },
-      { key: 'snow-reports', label: 'Snow Reports & Weather', url: 'https://www.jacksonhole.com/mountain-report', enabled: true },
-      { key: 'webcams', label: 'Live webcams', url: 'https://www.jacksonhole.com/live-mountain-cams', enabled: true },
-      { key: 'lift-tickets', label: 'Lift Tickets', url: 'https://www.jacksonhole.com/lift-tickets', enabled: true },
-      { key: 'season-passes', label: 'Season Passes', url: 'https://www.jacksonhole.com/season-pass', enabled: true },
-      { key: 'adult-lessons', label: 'Adult Lessons', url: '', enabled: false },
-      { key: 'kids-lessons', label: 'Kids Lessons', url: '', enabled: false },
-      { key: 'rentals', label: 'Ski/Snowboard Rentals', url: '', enabled: false },
-      { key: 'dining', label: 'Dining', url: 'https://www.jacksonhole.com/dining', enabled: true },
-      { key: 'lodging', label: 'Lodging', url: 'https://www.jacksonhole.com/lodging', enabled: true },
-      { key: 'events', label: 'Events', url: 'https://www.jacksonhole.com/events', enabled: true },
-      { key: 'parking', label: 'Parking & Transit', url: 'https://www.jacksonhole.com/getting-around', enabled: true },
+    knowledgeGroups: [
+      {
+        id: 'resort-info',
+        emoji: '🏔️',
+        label: 'Resort Info by Category',
+        entries: [
+          { key: 'hours', label: 'Hours of operation', url: '', enabled: true },
+          { key: 'contact', label: 'Contact', url: '', enabled: true },
+          { key: 'location', label: 'Location', url: '', enabled: true },
+          { key: 'trail-maps', label: 'Trail Maps & Slope Difficulty', url: 'https://www.jacksonhole.com/maps/mountain-winter', enabled: true },
+          { key: 'terrain-status', label: 'Terrain Status', url: '', enabled: false },
+          { key: 'snow-reports', label: 'Snow Reports & Weather', url: 'https://www.jacksonhole.com/mountain-report', enabled: true },
+          { key: 'webcams', label: 'Live webcams', url: 'https://www.jacksonhole.com/live-mountain-cams', enabled: true },
+        ],
+      },
+      {
+        id: 'tickets',
+        emoji: '🎫',
+        label: 'Tickets',
+        entries: [
+          { key: 'lift-tickets', label: 'Lift Tickets', url: 'https://www.jacksonhole.com/lift-tickets', enabled: true },
+          { key: 'deals-packages', label: 'Deals & Packages', url: '', enabled: false },
+        ],
+      },
+      {
+        id: 'season-passes',
+        emoji: '🎟️',
+        label: 'Season Passes',
+        entries: [
+          { key: 'types-of-passes', label: 'Types of Season Passes', url: 'https://www.jacksonhole.com/season-pass', enabled: true },
+          { key: 'pass-sale-launch', label: 'Sale Launch Date', url: '', enabled: false },
+          { key: 'tiered-pricing', label: 'Tiered Pricing', url: '', enabled: false },
+        ],
+      },
+      {
+        id: 'lessons',
+        emoji: '🎿',
+        label: 'Ski & Snowboard Lessons',
+        entries: [
+          { key: 'adult-lessons', label: 'Adult Lessons', url: '', enabled: false },
+          { key: 'kids-lessons', label: 'Kids Lessons', url: '', enabled: false },
+          { key: 'private-lessons', label: 'Private Lessons', url: '', enabled: false },
+          { key: 'group-lessons', label: 'Group Lessons', url: '', enabled: false },
+        ],
+      },
+      {
+        id: 'rentals',
+        emoji: '🎿',
+        label: 'Ski & Snowboard Rentals',
+        entries: [
+          { key: 'ski-rentals', label: 'Ski Rentals', url: '', enabled: false },
+          { key: 'snowboard-rentals', label: 'Snowboard Rentals', url: '', enabled: false },
+          { key: 'demo-rentals', label: 'Demo Rentals', url: '', enabled: false },
+        ],
+      },
+      {
+        id: 'refund-policies',
+        emoji: '📆',
+        label: 'Refund Policies',
+        entries: [
+          { key: 'refund-tickets', label: 'Tickets', url: '', enabled: false },
+          { key: 'refund-passes', label: 'Passes', url: '', enabled: false },
+          { key: 'refund-lodging', label: 'Lodging', url: '', enabled: false },
+          { key: 'refund-lessons-rentals', label: 'Lessons & Rentals', url: '', enabled: false },
+        ],
+      },
+      {
+        id: 'winter-activities',
+        emoji: '⛷',
+        label: 'Additional Winter Activities',
+        entries: [
+          { key: 'alpine-skiing', label: 'Alpine Skiing', url: '', enabled: false },
+          { key: 'snowboarding', label: 'Snowboarding', url: '', enabled: false },
+          { key: 'terrain-parks', label: 'Terrain Parks', url: '', enabled: false },
+          { key: 'night-skiing', label: 'Night skiing', url: '', enabled: false },
+          { key: 'backcountry', label: 'Backcountry', url: '', enabled: false },
+          { key: 'cat-skiing', label: 'Cat Skiing', url: '', enabled: false },
+          { key: 'uphill-access', label: 'Uphill Access', url: '', enabled: false },
+          { key: 'sledding', label: 'Sledding', url: '', enabled: false },
+          { key: 'snowshoeing', label: 'Snowshoeing', url: '', enabled: false },
+          { key: 'nordic-skiing', label: 'Nordic Skiing', url: '', enabled: false },
+          { key: 'sleigh-rides', label: 'Sleigh Rides', url: '', enabled: false },
+          { key: 'scenic-gondola', label: 'Scenic Gondola Rides', url: '', enabled: false },
+          { key: 'ice-skating', label: 'Ice Skating', url: '', enabled: false },
+          { key: 'winter-events', label: 'Winter Events', url: '', enabled: false },
+        ],
+      },
+      {
+        id: 'tubing',
+        emoji: '🏂',
+        label: 'Tubing',
+        entries: [
+          { key: 'tubing-hours', label: 'Hours', url: '', enabled: false },
+          { key: 'tubing-time-slots', label: 'Time slots', url: '', enabled: false },
+          { key: 'tubing-pricing', label: 'Pricing (static)', url: '', enabled: false },
+        ],
+      },
+      {
+        id: 'summer-activities',
+        emoji: '☀️',
+        label: 'Summer Activities',
+        entries: [
+          { key: 'hiking', label: 'Hiking', url: '', enabled: false },
+          { key: 'biking', label: 'Biking', url: '', enabled: false },
+          { key: 'zipline', label: 'Zipline', url: '', enabled: false },
+          { key: 'summer-gondola', label: 'Summer Gondola', url: '', enabled: false },
+          { key: 'disc-golf', label: 'Disc Golf', url: '', enabled: false },
+          { key: 'kids-camps', label: 'Kids Camps', url: '', enabled: false },
+          { key: 'yoga', label: 'Yoga', url: '', enabled: false },
+          { key: 'summer-events', label: 'Summer Events', url: '', enabled: false },
+          { key: 'golf', label: 'Golf', url: '', enabled: false },
+        ],
+      },
+      {
+        id: 'lodging',
+        emoji: '🏨',
+        label: 'Lodging',
+        entries: [
+          { key: 'lodging-options', label: 'Lodging Options', url: 'https://www.jacksonhole.com/lodging', enabled: true },
+        ],
+      },
+      {
+        id: 'dining',
+        emoji: '🍽',
+        label: 'Dining & Après',
+        entries: [
+          { key: 'on-mountain-dining', label: 'On-Mountain Dining', url: 'https://www.jacksonhole.com/dining', enabled: true },
+        ],
+      },
+      {
+        id: 'guest-services',
+        emoji: '🛎',
+        label: 'Guest Services & Safety',
+        entries: [
+          { key: 'faqs-lockers', label: 'FAQs, Lockers, Lost & Found', url: '', enabled: false },
+          { key: 'emergency-safety', label: 'Emergency & Safety Info', url: '', enabled: false },
+        ],
+      },
+      {
+        id: 'parking-transit',
+        emoji: '🚌',
+        label: 'Parking & Transit',
+        entries: [
+          { key: 'parking', label: 'Parking', url: 'https://www.jacksonhole.com/getting-around', enabled: true },
+          { key: 'shuttles', label: 'Shuttles', url: '', enabled: false },
+          { key: 'directions', label: 'Directions', url: '', enabled: false },
+        ],
+      },
+      {
+        id: 'events',
+        emoji: '📅',
+        label: 'Events',
+        entries: [
+          { key: 'resort-events', label: 'Resort Events & Activities', url: 'https://www.jacksonhole.com/events', enabled: true },
+        ],
+      },
+      {
+        id: 'pet-service-animals',
+        emoji: '🐶',
+        label: 'Pet & Service Animals',
+        entries: [
+          { key: 'pet-policies', label: 'Pet Policies & Lodging', url: '', enabled: false },
+          { key: 'service-animal', label: 'Service Animal Guidelines', url: '', enabled: false },
+        ],
+      },
+      {
+        id: 'packing-gear',
+        emoji: '🎒',
+        label: 'Packing & Gear',
+        entries: [
+          { key: 'ski-gear-checklist', label: 'Ski Gear Checklist', url: '', enabled: false },
+          { key: 'clothing-tips', label: 'Clothing Tips & Rental Guidance', url: '', enabled: false },
+        ],
+      },
+      {
+        id: 'other',
+        emoji: '🎉',
+        label: 'Other',
+        entries: [
+          { key: 'accessibility', label: 'Accessibility Services', url: '', enabled: false },
+          { key: 'childcare-family', label: 'Childcare & Family', url: '', enabled: false },
+          { key: 'health-wellness', label: 'Health & Wellness', url: '', enabled: false },
+          { key: 'group-corporate', label: 'Group & Corporate Events', url: '', enabled: false },
+          { key: 'employment', label: 'Employment', url: '', enabled: false },
+          { key: 'backcountry-access', label: 'Backcountry Access', url: '', enabled: false },
+        ],
+      },
     ],
     flows: [
       { key: 'get_snow_report', label: 'get_snow_report', enabled: true },
