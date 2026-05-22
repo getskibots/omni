@@ -1,18 +1,11 @@
 import { useMemo, useState } from 'react';
 import { Check, Sparkles, ChevronDown, ChevronRight, Lock, Plus, X } from 'lucide-react';
-import {
-  jacksonHole,
-  renderTemplate,
-  INDUSTRY_LABELS,
-  NOTE_TYPE_META,
-  sortNotes,
-} from '../data/parent';
+import { jacksonHole, renderTemplate, INDUSTRY_LABELS } from '../data/parent';
 import type {
   ResortTemplate,
   KnowledgeGroup,
   KnowledgeUrl,
   KnowledgeNote,
-  KnowledgeNoteType,
 } from '../data/parent';
 import { BOILERPLATE_SECTIONS } from '../data/template-boilerplate';
 
@@ -369,7 +362,7 @@ function EntryRow({
         <div className="ml-[36px] space-y-1.5">
           {entry.notes &&
             entry.notes.length > 0 &&
-            sortNotes(entry.notes).map((n) => (
+            entry.notes.map((n) => (
               <NotePill key={n.id} note={n} onRemove={() => onRemoveNote(n.id)} />
             ))}
           {adding ? (
@@ -395,21 +388,13 @@ function EntryRow({
 }
 
 function NotePill({ note, onRemove }: { note: KnowledgeNote; onRemove: () => void }) {
-  const meta = NOTE_TYPE_META[note.type];
   return (
-    <div
-      className={`group flex items-start gap-2 px-2.5 py-1.5 rounded-md border text-xs ${meta.tone}`}
-    >
-      <span className="font-semibold whitespace-nowrap">
-        <span className="mr-1">{meta.emoji}</span>
-        {meta.renderLabel}:
-      </span>
-      <span className="flex-1 leading-relaxed">
-        {note.type === 'script' ? <em>"{note.text}"</em> : note.text}
-      </span>
+    <div className="group flex items-start gap-2 text-sm text-slate-700 leading-relaxed">
+      <span className="text-slate-400 mt-0.5 select-none">•</span>
+      <span className="flex-1">{note.text}</span>
       <button
         onClick={onRemove}
-        className="opacity-0 group-hover:opacity-60 hover:!opacity-100 transition"
+        className="opacity-0 group-hover:opacity-60 hover:!opacity-100 transition mt-0.5"
         title="Remove note"
       >
         <X className="h-3.5 w-3.5" strokeWidth={2} />
@@ -425,44 +410,19 @@ function NoteEditor({
   onSave: (note: KnowledgeNote) => void;
   onCancel: () => void;
 }) {
-  const [type, setType] = useState<KnowledgeNoteType>('rule');
   const [text, setText] = useState('');
   const save = () => {
     const trimmed = text.trim();
     if (!trimmed) return;
-    onSave({ id: `n-${Math.random().toString(36).slice(2, 9)}`, type, text: trimmed });
+    onSave({ id: `n-${Math.random().toString(36).slice(2, 9)}`, type: 'rule', text: trimmed });
   };
   return (
     <div className="bg-slate-50 border border-slate-200 rounded-md p-2.5 space-y-2">
-      <div className="flex items-center gap-2">
-        <label className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold">
-          Type
-        </label>
-        <select
-          value={type}
-          onChange={(e) => setType(e.target.value as KnowledgeNoteType)}
-          className="text-xs border border-slate-200 rounded-md px-2 py-1 bg-white"
-        >
-          {(['critical', 'rule', 'script', 'faq'] as KnowledgeNoteType[]).map((t) => (
-            <option key={t} value={t}>
-              {NOTE_TYPE_META[t].emoji} {NOTE_TYPE_META[t].label}
-            </option>
-          ))}
-        </select>
-      </div>
       <textarea
         value={text}
         onChange={(e) => setText(e.target.value)}
         autoFocus
-        placeholder={
-          type === 'critical'
-            ? 'A high-priority rule the bot must surface…'
-            : type === 'script'
-              ? 'Exact phrasing the bot should use…'
-              : type === 'faq'
-                ? 'Q: …  /  A: …'
-                : 'Policy rule the bot should cite…'
-        }
+        placeholder="Add a policy, rule, or scripted answer the bot should use for this topic…"
         className="w-full min-h-[56px] text-sm px-2 py-1.5 border border-slate-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-botscrew-400"
       />
       <div className="flex items-center justify-end gap-2">
