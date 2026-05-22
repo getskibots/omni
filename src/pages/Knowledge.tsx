@@ -8,6 +8,7 @@ import {
 } from '../data/parent';
 import type { LayerId, VoiceStack } from '../data/parent';
 import { LayerIcon } from '../components/LayerIcon';
+import { ChevronsRight } from 'lucide-react';
 
 type KnowledgeSection = 'instructions' | 'text-edits' | 'files' | 'website';
 
@@ -294,7 +295,13 @@ function LayerPicker({
         onSelect={onSelect}
         label="Parent"
       />
-      <div className="w-px bg-slate-200 mx-1" />
+      <div
+        className="flex items-center justify-center px-1"
+        aria-label="inherits to"
+        title="Parent inherits to all channels"
+      >
+        <ChevronsRight strokeWidth={1.75} className="h-4 w-4 text-slate-300" />
+      </div>
       {jacksonHole.channels.map((c) => (
         <LayerPill
           key={c.id}
