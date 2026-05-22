@@ -9,7 +9,8 @@ import {
 import type { LayerId, VoiceStack } from '../data/parent';
 import { LayerIcon } from '../components/LayerIcon';
 import TemplateForm from '../components/TemplateForm';
-import { ChevronsRight } from 'lucide-react';
+import TestVoiceModal from '../components/TestVoiceModal';
+import { ChevronsRight, Phone } from 'lucide-react';
 
 type KnowledgeSection = 'instructions' | 'text-edits' | 'files' | 'website';
 
@@ -108,6 +109,7 @@ function Instructions() {
   );
   const [activeLayer, setActiveLayer] = useState<LayerId>('parent');
   const [parentSubTab, setParentSubTab] = useState<'template' | 'customization'>('template');
+  const [testVoiceOpen, setTestVoiceOpen] = useState(false);
 
   const layers = useMemo(
     () => ({
@@ -152,6 +154,13 @@ function Instructions() {
         onParentModel={setModel}
         voiceStack={voiceStack}
         onVoiceStack={setVoiceStack}
+        onTestVoice={() => setTestVoiceOpen(true)}
+      />
+
+      <TestVoiceModal
+        open={testVoiceOpen}
+        onClose={() => setTestVoiceOpen(false)}
+        voiceStack={voiceStack}
       />
 
       <div>
@@ -255,12 +264,14 @@ function ModelRow({
   onParentModel,
   voiceStack,
   onVoiceStack,
+  onTestVoice,
 }: {
   activeLayer: LayerId;
   parentModel: string;
   onParentModel: (v: string) => void;
   voiceStack: VoiceStack;
   onVoiceStack: (v: VoiceStack) => void;
+  onTestVoice: () => void;
 }) {
   if (activeLayer === 'parent') {
     return (
@@ -277,7 +288,7 @@ function ModelRow({
 
   if (activeLayer === 'voice') {
     return (
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-[1fr_1fr_1fr_auto] gap-4 items-end">
         <FieldDropdown
           label="Model"
           value={voiceStack.model}
@@ -296,6 +307,14 @@ function ModelRow({
           onChange={(v) => onVoiceStack({ ...voiceStack, transcriptionModel: v })}
           options={[...VOICE_TRANSCRIPTION_OPTIONS]}
         />
+        <button
+          onClick={onTestVoice}
+          className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium bg-botscrew-500 hover:bg-botscrew-600 text-white rounded-md whitespace-nowrap shadow-sm"
+          title="Test the voice prompt without placing a phone call"
+        >
+          <Phone className="h-3.5 w-3.5" strokeWidth={2} />
+          Test Voice AI
+        </button>
       </div>
     );
   }
