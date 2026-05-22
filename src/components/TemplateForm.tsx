@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Check, Sparkles } from 'lucide-react';
-import { jacksonHole, renderTemplate } from '../data/parent';
+import { jacksonHole, renderTemplate, INDUSTRY_LABELS } from '../data/parent';
 import type { ResortTemplate } from '../data/parent';
 
 export default function TemplateForm() {
@@ -30,7 +30,7 @@ export default function TemplateForm() {
       <div className="flex items-center gap-2 text-xs text-slate-500">
         <Sparkles className="h-3.5 w-3.5 text-botscrew-500" strokeWidth={1.75} />
         <span>
-          GSB Template{' '}
+          GSB {INDUSTRY_LABELS[template.industry]} Template{' '}
           <span className="font-mono text-slate-600">{jacksonHole.templateVersion}</span> · updated{' '}
           {jacksonHole.templateUpdated}. Master updates propagate to every partner.
         </span>

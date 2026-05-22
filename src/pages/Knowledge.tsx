@@ -175,7 +175,7 @@ function Instructions() {
               id="customization"
               active={parentSubTab}
               onClick={setParentSubTab}
-              label="Customization"
+              label="Custom Instructions"
             />
           </div>
           {parentSubTab === 'template' ? (
@@ -185,7 +185,7 @@ function Instructions() {
               value={parentPrompt}
               onChange={setParentPrompt}
               limit={limit}
-              hint="Resort-specific rules and scripts that aren't in the template (e.g. Peak Pass blackouts, military discount scripts, persona definitions)."
+              hint="Partner-specific rules and scripts not covered by the template (e.g. Peak Pass blackouts, military discount scripts, persona definitions)."
               placeholder=""
             />
           )}

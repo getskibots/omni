@@ -70,7 +70,37 @@ export interface RealtimeFlow {
   enabled: boolean;
 }
 
+export type Industry =
+  | 'ski-resort'
+  | 'lodging'
+  | 'transportation'
+  | 'ski-rentals'
+  | 'dmo'
+  | 'tour-operator'
+  | 'waterpark'
+  | 'help-desk'
+  | 'vacation-rental';
+
+export const INDUSTRY_LABELS: Record<Industry, string> = {
+  'ski-resort': 'Ski Resort',
+  lodging: 'Lodging',
+  transportation: 'Transportation',
+  'ski-rentals': 'Ski Rentals',
+  dmo: 'Destination Marketing',
+  'tour-operator': 'Tour Operator',
+  waterpark: 'Waterpark',
+  'help-desk': 'Help Desk',
+  'vacation-rental': 'Vacation Rental',
+};
+
+/**
+ * Industry-shaped template. Today's schema is ski-resort-specific (resortName,
+ * knowledge categories, flows, multi-pass). When we add the second vertical we'll
+ * refactor to per-industry shapes. See project_omni memory for the multi-vertical
+ * roadmap.
+ */
 export interface ResortTemplate {
+  industry: Industry;
   resortName: string;
   officialUrl: string;
   contactEmail: string;
@@ -398,6 +428,7 @@ export const jacksonHole: ParentSummary = {
   templateVersion: 'v2.4',
   templateUpdated: '2 days ago',
   template: {
+    industry: 'ski-resort',
     resortName: 'Jackson Hole Mountain Resort',
     officialUrl: 'www.jacksonhole.com',
     contactEmail: 'info@jacksonhole.com',
