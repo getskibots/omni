@@ -292,7 +292,7 @@ function LayerPicker({
         id="parent"
         active={active}
         onSelect={onSelect}
-        label="Parent · System Role"
+        label="Parent"
       />
       <div className="w-px bg-slate-200 mx-1" />
       {jacksonHole.channels.map((c) => (
@@ -501,7 +501,7 @@ function layerMeta(id: LayerId) {
   switch (id) {
     case 'parent':
       return {
-        title: 'Parent · System Role',
+        title: 'Parent',
         subtitle: 'Identity, personas, and policies. Inherited by every channel.',
         hint: 'Channel-specific rules (length, formatting, fallback) live on each channel layer below — not here.',
         placeholder: '',
