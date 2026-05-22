@@ -1,4 +1,5 @@
 import { jacksonHole } from '../data/parent';
+import { LayerIcon } from '../components/LayerIcon';
 
 export default function SettingsChannels() {
   return (
@@ -25,7 +26,7 @@ export default function SettingsChannels() {
           >
             <div className="px-5 py-4 flex items-center justify-between border-b border-slate-100">
               <div className="flex items-center gap-3">
-                <div className="text-2xl">{c.icon}</div>
+                <LayerIcon id={c.id} className="h-6 w-6 text-slate-600" />
                 <div>
                   <div className="font-semibold text-ink-900">{c.label}</div>
                   <div className="text-xs text-slate-500 font-mono mt-0.5">

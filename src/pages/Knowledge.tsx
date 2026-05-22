@@ -7,6 +7,7 @@ import {
   VOICE_TRANSCRIPTION_OPTIONS,
 } from '../data/parent';
 import type { LayerId, VoiceStack } from '../data/parent';
+import { LayerIcon } from '../components/LayerIcon';
 
 type KnowledgeSection = 'instructions' | 'text-edits' | 'files' | 'website';
 
@@ -152,7 +153,7 @@ function Instructions() {
 
       <div>
         <h3 className="text-base font-semibold text-ink-900 flex items-center gap-2">
-          <span>{activeMeta.icon}</span>
+          <LayerIcon id={activeLayer} className="h-4 w-4 text-slate-600" />
           <span>{activeMeta.title}</span>
         </h3>
         <p className="text-sm text-slate-500 mt-1">{activeMeta.subtitle}</p>
@@ -291,7 +292,6 @@ function LayerPicker({
         id="parent"
         active={active}
         onSelect={onSelect}
-        icon="●"
         label="Parent · System Role"
       />
       <div className="w-px bg-slate-200 mx-1" />
@@ -301,7 +301,6 @@ function LayerPicker({
           id={c.id}
           active={active}
           onSelect={onSelect}
-          icon={c.icon}
           label={c.label}
           notConnected={c.status === 'not-connected'}
         />
@@ -314,14 +313,12 @@ function LayerPill({
   id,
   active,
   onSelect,
-  icon,
   label,
   notConnected,
 }: {
   id: LayerId;
   active: LayerId;
   onSelect: (id: LayerId) => void;
-  icon: string;
   label: string;
   notConnected?: boolean;
 }) {
@@ -336,7 +333,10 @@ function LayerPill({
       }`}
     >
       <div className="flex items-center gap-2">
-        <span className="text-sm leading-none">{icon}</span>
+        <LayerIcon
+          id={id}
+          className={`h-4 w-4 shrink-0 ${isActive ? 'text-botscrew-600' : 'text-slate-500'}`}
+        />
         <span className="text-sm font-medium truncate">{label}</span>
         {notConnected && (
           <span className="ml-auto text-[11px] text-slate-400 italic">not connected</span>
@@ -440,7 +440,7 @@ function AssembledPreviews({ layers }: { layers: Record<LayerId, string> }) {
           return (
             <div key={c.id} className="flex items-center justify-between text-sm">
               <div className="flex items-center gap-2">
-                <span>{c.icon}</span>
+                <LayerIcon id={c.id} className="h-4 w-4 text-slate-500" />
                 <span className="font-medium text-ink-900">{c.label}</span>
                 {c.botscrewBotId && (
                   <span className="text-xs font-mono text-slate-400">{c.botscrewBotId}</span>
@@ -503,7 +503,6 @@ function layerMeta(id: LayerId) {
       return {
         title: 'Parent · System Role',
         subtitle: 'Identity, personas, and policies. Inherited by every channel.',
-        icon: '●',
         hint: 'Channel-specific rules (length, formatting, fallback) live on each channel layer below — not here.',
         placeholder: '',
       };
@@ -511,7 +510,6 @@ function layerMeta(id: LayerId) {
       return {
         title: 'Chat',
         subtitle: 'Web, Facebook, WhatsApp, SMS. Short-form messaging — appended to the Parent.',
-        icon: '💬',
         hint: 'This override is appended to the Parent when Chat handles a message.',
         placeholder: 'Add chat-specific rules…',
       };
@@ -519,7 +517,6 @@ function layerMeta(id: LayerId) {
       return {
         title: 'Voice',
         subtitle: 'Phone calls via Twilio. Spoken responses — appended to the Parent.',
-        icon: '📞',
         hint: 'This override is appended to the Parent when Voice handles a call.',
         placeholder: 'Add voice-specific rules…',
       };
@@ -527,7 +524,6 @@ function layerMeta(id: LayerId) {
       return {
         title: 'Email',
         subtitle: 'Inbound + outbound email. Long-form, threaded — appended to the Parent.',
-        icon: '✉️',
         hint: 'This override is appended to the Parent when Email handles a message.',
         placeholder: 'Add email-specific rules…',
       };
