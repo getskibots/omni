@@ -178,6 +178,7 @@ export interface ResortTemplate {
   knowledgeGroups: KnowledgeGroup[];
   flows: RealtimeFlow[];
   multiPass: { hasPartners: boolean; partners: string[] };
+  usesEcommerceDoc: boolean;
 }
 
 export const DEFAULT_BEHAVIOR_SECTIONS: BehaviorSection[] = [
@@ -222,6 +223,16 @@ export const DEFAULT_BEHAVIOR_SECTIONS: BehaviorSection[] = [
 - Do not reference outdated seasonal offerings, past events, or expired information as if they are current.
 - Do not assume winter information applies to summer operations, or summer information applies to winter operations.
 - If time-sensitive information cannot be confirmed, do not guess.`,
+  },
+  {
+    id: 'prequalifying',
+    emoji: '🔎',
+    title: 'Prequalifying & Clarifying Guest Intent',
+    body: `- Answer immediately when the guest's request is clear.
+- Ask a clarifying question only when the missing detail would materially change the answer.
+- Prefer short either/or questions over open-ended questions.
+- Do not delay simple factual answers with unnecessary clarification.
+- If a verified answer can be given without clarification, answer first.`,
   },
 ];
 
@@ -497,7 +508,7 @@ Tone:
 • Slightly more formal than chat, still warm. Match the guest's register — formal if they're formal, casual if they're casual.`;
 
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports
-import { BOILERPLATE_SECTIONS } from './template-boilerplate';
+import { BOILERPLATE_SECTIONS, ECOMMERCE_SECTION, REALTIME_FLOWS_INTRO } from './template-boilerplate';
 
 export function renderTemplate(t: ResortTemplate): string {
   const lines: string[] = [];
@@ -507,28 +518,37 @@ export function renderTemplate(t: ResortTemplate): string {
   if (t.officialUrl) lines.push(`Official Website: ${t.officialUrl}`);
   lines.push('');
 
-  // Editable behavior sections (Purpose, Role, Behavior Pillars, Time Awareness)
+  // Editable behavior sections (Purpose, Role, Behavior Pillars, Time Awareness, Prequalifying)
   t.behaviorSections.forEach((section) => {
     lines.push(`${section.emoji} ${section.title}`);
     lines.push(substituteVariables(section.body, t));
     lines.push('');
   });
 
-  // GSB-managed boilerplate sections (Realtime, Linking, Prequalifying, etc.)
+  // Realtime Data Flows — intro + enabled flow list
+  const enabledFlows = t.flows.filter((f) => f.enabled);
+  if (enabledFlows.length > 0) {
+    lines.push('⚡ Realtime Data Flows');
+    lines.push(REALTIME_FLOWS_INTRO);
+    enabledFlows.forEach((f) => {
+      lines.push(`- Use ${f.label} for the matching topic.`);
+    });
+    lines.push('');
+  }
+
+  // GSB-managed boilerplate sections (Linking, Fallback, AI Transparency)
   BOILERPLATE_SECTIONS.forEach((section) => {
     lines.push(`${section.emoji} ${section.title}`);
     lines.push(section.body(t));
-    // Append enabled flow list to the Realtime section
-    if (section.title === 'Realtime Data Tool Usage') {
-      const enabled = t.flows.filter((f) => f.enabled);
-      if (enabled.length > 0) {
-        enabled.forEach((f) => {
-          lines.push(`- Use ${f.label} for the matching topic.`);
-        });
-      }
-    }
     lines.push('');
   });
+
+  // Conditional Ecommerce section
+  if (t.usesEcommerceDoc) {
+    lines.push(`${ECOMMERCE_SECTION.emoji} ${ECOMMERCE_SECTION.title}`);
+    lines.push(ECOMMERCE_SECTION.body(t));
+    lines.push('');
+  }
 
   // Resort Knowledge Sections
   lines.push('📚 Resort Knowledge Sections');
@@ -580,6 +600,7 @@ export const jacksonHole: ParentSummary = {
     officialUrl: 'www.jacksonhole.com',
     contactEmail: 'info@jacksonhole.com',
     contactPhone: '855-679-7246',
+    usesEcommerceDoc: false,
     behaviorSections: DEFAULT_BEHAVIOR_SECTIONS,
     knowledgeGroups: [
       {

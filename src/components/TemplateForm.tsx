@@ -45,7 +45,7 @@ import type {
   KnowledgeNoteType,
   BehaviorSection,
 } from '../data/parent';
-import { BOILERPLATE_SECTIONS } from '../data/template-boilerplate';
+import { BOILERPLATE_SECTIONS, ECOMMERCE_SECTION } from '../data/template-boilerplate';
 
 function newId(prefix: string): string {
   return `${prefix}-${Math.random().toString(36).slice(2, 9)}`;
@@ -252,11 +252,12 @@ export default function TemplateForm() {
         open={boilerplateOpen}
         onToggle={() => setBoilerplateOpen(!boilerplateOpen)}
         template={template}
+        onToggleEcommerce={(v) => setTemplate({ ...template, usesEcommerceDoc: v })}
       />
 
       <Section
         title="⚡ Realtime Data Flows"
-        subtitle="Enable the flows your bot should call for live data. Each flow corresponds to a tool the model can invoke mid-conversation."
+        subtitle="Use realtime data flows for current conditions, status, or upcoming activities. Prefer flow data over static website content for time-sensitive topics. If a flow is unavailable, fall back to verified resort content; never guess."
         collapsible
         defaultOpen={false}
       >
@@ -547,11 +548,14 @@ function BoilerplateSection({
   open,
   onToggle,
   template,
+  onToggleEcommerce,
 }: {
   open: boolean;
   onToggle: () => void;
   template: ResortTemplate;
+  onToggleEcommerce: (v: boolean) => void;
 }) {
+  const totalCount = BOILERPLATE_SECTIONS.length + (template.usesEcommerceDoc ? 1 : 0);
   return (
     <div className="bg-white border border-slate-200 rounded-xl shadow-card overflow-hidden">
       <button
@@ -567,7 +571,7 @@ function BoilerplateSection({
           <span className="text-sm font-semibold text-ink-900">Template Boilerplate</span>
           <span className="inline-flex items-center gap-1 text-[11px] text-slate-500 ml-2">
             <Lock className="h-3 w-3" strokeWidth={2} />
-            GSB-managed · {BOILERPLATE_SECTIONS.length} sections
+            GSB-managed · {totalCount} section{totalCount === 1 ? '' : 's'}
           </span>
         </div>
         <span className="text-xs text-slate-400">
@@ -575,19 +579,47 @@ function BoilerplateSection({
         </span>
       </button>
       {open && (
-        <div className="border-t border-slate-100 divide-y divide-slate-100">
-          {BOILERPLATE_SECTIONS.map((section) => (
-            <div key={section.title} className="px-4 py-3">
-              <div className="text-sm font-semibold text-ink-900 mb-1.5">
-                <span className="mr-1.5">{section.emoji}</span>
-                {section.title}
+        <>
+          <label
+            className="flex items-center gap-2 px-4 py-2.5 bg-slate-50 border-t border-slate-100 cursor-pointer hover:bg-slate-100"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Toggle
+              checked={template.usesEcommerceDoc}
+              onChange={(v) => onToggleEcommerce(v)}
+            />
+            <span className="text-xs text-slate-700">
+              Resort uses the GSB ecommerce / account-management doc
+            </span>
+            <span className="text-[11px] text-slate-400 ml-1">
+              {template.usesEcommerceDoc ? '+ 🛒 Ecommerce section' : '(adds 🛒 Ecommerce section when on)'}
+            </span>
+          </label>
+          <div className="border-t border-slate-100 divide-y divide-slate-100">
+            {BOILERPLATE_SECTIONS.map((section) => (
+              <div key={section.title} className="px-4 py-3">
+                <div className="text-sm font-semibold text-ink-900 mb-1.5">
+                  <span className="mr-1.5">{section.emoji}</span>
+                  {section.title}
+                </div>
+                <pre className="text-xs font-mono text-slate-600 whitespace-pre-wrap leading-relaxed">
+                  {section.body(template)}
+                </pre>
               </div>
-              <pre className="text-xs font-mono text-slate-600 whitespace-pre-wrap leading-relaxed">
-                {section.body(template)}
-              </pre>
-            </div>
-          ))}
-        </div>
+            ))}
+            {template.usesEcommerceDoc && (
+              <div className="px-4 py-3">
+                <div className="text-sm font-semibold text-ink-900 mb-1.5">
+                  <span className="mr-1.5">{ECOMMERCE_SECTION.emoji}</span>
+                  {ECOMMERCE_SECTION.title}
+                </div>
+                <pre className="text-xs font-mono text-slate-600 whitespace-pre-wrap leading-relaxed">
+                  {ECOMMERCE_SECTION.body(template)}
+                </pre>
+              </div>
+            )}
+          </div>
+        </>
       )}
     </div>
   );
