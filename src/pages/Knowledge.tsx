@@ -1,6 +1,12 @@
 import { useMemo, useState } from 'react';
-import { jacksonHole } from '../data/parent';
-import type { LayerId } from '../data/parent';
+import {
+  jacksonHole,
+  PARENT_MODEL_OPTIONS,
+  VOICE_MODEL_OPTIONS,
+  VOICE_VOICE_OPTIONS,
+  VOICE_TRANSCRIPTION_OPTIONS,
+} from '../data/parent';
+import type { LayerId, VoiceStack } from '../data/parent';
 
 type KnowledgeSection = 'instructions' | 'text-edits' | 'files' | 'website';
 
@@ -88,11 +94,15 @@ function KnowledgeLayersRail({
 }
 
 function Instructions() {
+  const voiceChannel = jacksonHole.channels[1];
   const [parentPrompt, setParentPrompt] = useState(jacksonHole.systemRolePrompt);
   const [model, setModel] = useState(jacksonHole.defaultModel);
   const [chatPrompt, setChatPrompt] = useState(jacksonHole.channels[0].overridePrompt);
-  const [voicePrompt, setVoicePrompt] = useState(jacksonHole.channels[1].overridePrompt);
+  const [voicePrompt, setVoicePrompt] = useState(voiceChannel.overridePrompt);
   const [emailPrompt, setEmailPrompt] = useState(jacksonHole.channels[2].overridePrompt);
+  const [voiceStack, setVoiceStack] = useState<VoiceStack>(
+    voiceChannel.voiceStack ?? { model: 'gpt-realtime', voice: 'ash', transcriptionModel: 'whisper-1' },
+  );
   const [activeLayer, setActiveLayer] = useState<LayerId>('parent');
 
   const layers = useMemo(
@@ -132,6 +142,14 @@ function Instructions() {
 
       <LayerPicker layers={layers} active={activeLayer} onSelect={setActiveLayer} />
 
+      <ModelRow
+        activeLayer={activeLayer}
+        parentModel={model}
+        onParentModel={setModel}
+        voiceStack={voiceStack}
+        onVoiceStack={setVoiceStack}
+      />
+
       <div className="flex items-end justify-between gap-3">
         <div>
           <div className="text-[11px] font-semibold tracking-wider text-slate-400 uppercase">
@@ -148,23 +166,6 @@ function Instructions() {
           </h3>
           <p className="text-sm text-slate-500 mt-0.5">{activeMeta.subtitle}</p>
         </div>
-        {activeLayer === 'parent' && (
-          <div className="flex flex-col items-end gap-1">
-            <label className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold">
-              Default model
-            </label>
-            <select
-              value={model}
-              onChange={(e) => setModel(e.target.value)}
-              className="text-sm border border-slate-200 rounded-md px-3 py-1.5 bg-white"
-            >
-              <option value="gpt-5.2">gpt-5.2</option>
-              <option value="gpt-5.1">gpt-5.1</option>
-              <option value="claude-opus-4-7">claude-opus-4-7</option>
-              <option value="claude-sonnet-4-6">claude-sonnet-4-6</option>
-            </select>
-          </div>
-        )}
       </div>
 
       {activeLayer === 'email' && activeChannel?.status === 'not-connected' ? (
@@ -198,6 +199,90 @@ function Instructions() {
           </button>
         </div>
       </footer>
+    </div>
+  );
+}
+
+function ModelRow({
+  activeLayer,
+  parentModel,
+  onParentModel,
+  voiceStack,
+  onVoiceStack,
+}: {
+  activeLayer: LayerId;
+  parentModel: string;
+  onParentModel: (v: string) => void;
+  voiceStack: VoiceStack;
+  onVoiceStack: (v: VoiceStack) => void;
+}) {
+  if (activeLayer === 'parent') {
+    return (
+      <div className="grid grid-cols-1 max-w-md">
+        <FieldDropdown
+          label="Default model"
+          value={parentModel}
+          onChange={onParentModel}
+          options={[...PARENT_MODEL_OPTIONS]}
+        />
+      </div>
+    );
+  }
+
+  if (activeLayer === 'voice') {
+    return (
+      <div className="grid grid-cols-3 gap-4">
+        <FieldDropdown
+          label="Model"
+          value={voiceStack.model}
+          onChange={(v) => onVoiceStack({ ...voiceStack, model: v })}
+          options={[...VOICE_MODEL_OPTIONS]}
+        />
+        <FieldDropdown
+          label="Voice"
+          value={voiceStack.voice}
+          onChange={(v) => onVoiceStack({ ...voiceStack, voice: v })}
+          options={[...VOICE_VOICE_OPTIONS]}
+        />
+        <FieldDropdown
+          label="Transcription Model"
+          value={voiceStack.transcriptionModel}
+          onChange={(v) => onVoiceStack({ ...voiceStack, transcriptionModel: v })}
+          options={[...VOICE_TRANSCRIPTION_OPTIONS]}
+        />
+      </div>
+    );
+  }
+
+  // chat / email: model row placeholder (inherit-with-override comes in next task)
+  return null;
+}
+
+function FieldDropdown({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  options: string[];
+}) {
+  return (
+    <div>
+      <label className="block text-sm text-slate-600 mb-1.5">{label}</label>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full text-sm border border-slate-200 rounded-md px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-botscrew-400"
+      >
+        {options.map((opt) => (
+          <option key={opt} value={opt}>
+            {opt}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }

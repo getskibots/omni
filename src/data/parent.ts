@@ -1,6 +1,12 @@
 export type ChannelStatus = 'active' | 'not-connected';
 export type LayerId = 'parent' | 'chat' | 'voice' | 'email';
 
+export interface VoiceStack {
+  model: string;
+  voice: string;
+  transcriptionModel: string;
+}
+
 export interface ChannelLayer {
   id: Exclude<LayerId, 'parent'>;
   label: string;
@@ -11,7 +17,45 @@ export interface ChannelLayer {
   connectors?: string[];
   overridePrompt: string;
   overrideLimit: number;
+  voiceStack?: VoiceStack;
 }
+
+export const VOICE_MODEL_OPTIONS = [
+  'gpt-realtime',
+  'gpt-realtime-1.5',
+  'gpt-realtime-2025-08-28',
+  'gpt-4o-realtime-preview',
+  'gpt-4o-realtime-preview-2025-06-03',
+  'gpt-4o-realtime-preview-2024-12-17',
+] as const;
+
+export const VOICE_VOICE_OPTIONS = [
+  'alloy',
+  'ash',
+  'ballad',
+  'coral',
+  'echo',
+  'sage',
+  'shimmer',
+  'verse',
+] as const;
+
+export const VOICE_TRANSCRIPTION_OPTIONS = [
+  'whisper-1',
+  'gpt-4o-mini-transcribe',
+  'gpt-4o-transcribe',
+] as const;
+
+export const PARENT_MODEL_OPTIONS = [
+  'gpt-5.4',
+  'gpt-5.4-mini',
+  'gpt-5.2',
+  'gpt-5',
+  'gpt-5-mini',
+  'claude-opus-4-7',
+  'claude-sonnet-4-6',
+  'claude-haiku-4-5',
+] as const;
 
 export interface ParentSummary {
   id: string;
@@ -313,6 +357,11 @@ export const jacksonHole: ParentSummary = {
       wiring: 'Twilio: +1 307·284·5392',
       overridePrompt: VOICE_OVERRIDE,
       overrideLimit: 2500,
+      voiceStack: {
+        model: 'gpt-realtime',
+        voice: 'ash',
+        transcriptionModel: 'whisper-1',
+      },
     },
     {
       id: 'email',
