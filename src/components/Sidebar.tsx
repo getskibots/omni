@@ -7,6 +7,7 @@ import {
   Wand2,
   MessagesSquare,
   Headphones,
+  MessageSquare,
   SlidersHorizontal,
   CircleHelp,
   type LucideIcon,
@@ -27,6 +28,7 @@ const items: NavItem[] = [
   { to: '/actions', label: 'Actions', Icon: Wand2 },
   { to: '/triggers', label: 'Triggers', Icon: MessagesSquare },
   { to: '/support', label: 'Support', Icon: Headphones },
+  { to: '/widget', label: 'Widget', Icon: MessageSquare },
   { to: '/settings', label: 'Settings', Icon: SlidersHorizontal },
   { to: '/help', label: 'Help', Icon: CircleHelp },
 ];
