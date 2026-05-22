@@ -169,7 +169,7 @@ function Instructions() {
               id="template"
               active={parentSubTab}
               onClick={setParentSubTab}
-              label="Template"
+              label="Preset"
             />
             <SubTab
               id="customization"
@@ -185,7 +185,7 @@ function Instructions() {
               value={parentPrompt}
               onChange={setParentPrompt}
               limit={limit}
-              hint="Partner-specific rules and scripts not covered by the template (e.g. Peak Pass blackouts, military discount scripts, persona definitions)."
+              hint="Partner-specific rules and scripts not covered by the preset (e.g. Peak Pass blackouts, military discount scripts, persona definitions)."
               placeholder=""
             />
           )}

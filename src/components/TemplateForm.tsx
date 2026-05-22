@@ -194,7 +194,7 @@ export default function TemplateForm() {
       <div className="flex items-center gap-2 text-xs text-slate-500">
         <Sparkles className="h-3.5 w-3.5 text-botscrew-500" strokeWidth={1.75} />
         <span>
-          GSB {INDUSTRY_LABELS[template.industry]} Template{' '}
+          GSB {INDUSTRY_LABELS[template.industry]} Preset{' '}
           <span className="font-mono text-slate-600">{jacksonHole.templateVersion}</span> · updated{' '}
           {jacksonHole.templateUpdated}. Master updates propagate to every partner.
         </span>
@@ -568,7 +568,7 @@ function BoilerplateSection({
           ) : (
             <ChevronRight className="h-4 w-4 text-slate-400" strokeWidth={2} />
           )}
-          <span className="text-sm font-semibold text-ink-900">Template Boilerplate</span>
+          <span className="text-sm font-semibold text-ink-900">Preset Boilerplate</span>
           <span className="inline-flex items-center gap-1 text-[11px] text-slate-500 ml-2">
             <Lock className="h-3 w-3" strokeWidth={2} />
             GSB-managed · {totalCount} section{totalCount === 1 ? '' : 's'}
