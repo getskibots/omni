@@ -1,8 +1,8 @@
-import { Sparkles, MessageCircle, Phone, Mail, type LucideIcon } from 'lucide-react';
+import { Crown, MessageCircle, Phone, Mail, type LucideIcon } from 'lucide-react';
 import type { LayerId } from '../data/parent';
 
 const ICONS: Record<LayerId, LucideIcon> = {
-  parent: Sparkles,
+  parent: Crown,
   chat: MessageCircle,
   voice: Phone,
   email: Mail,
