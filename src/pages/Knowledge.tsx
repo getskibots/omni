@@ -657,6 +657,7 @@ function VoiceModelRow({
                   customVoices.map((cv) => (
                     <option key={cv.id} value={cv.voiceId}>
                       {cv.name}
+                      {cv.accent ? ` (${cv.accent})` : ''}
                     </option>
                   ))
                 )}
@@ -698,29 +699,48 @@ function VoiceModelRow({
             </div>
           </div>
 
-          {customVoices.length > 0 && (
-            <div className="text-[11px] text-slate-400">
-              Active voice_id: <code className="font-mono text-slate-600">{voiceStack.voice}</code>{' '}
-              ·{' '}
-              <button
-                onClick={() => {
-                  const found = customVoices.find((cv) => cv.voiceId === voiceStack.voice);
-                  if (found && confirm(`Remove "${found.name}"?`)) {
-                    onRemoveCustomVoice(found.id);
-                    const remaining = customVoices.filter((cv) => cv.id !== found.id);
-                    if (remaining.length > 0) {
-                      onVoiceStack({ ...voiceStack, voice: remaining[0].voiceId });
-                    } else {
-                      switchToOpenAI();
-                    }
-                  }
-                }}
-                className="text-slate-500 hover:text-danger underline"
-              >
-                remove this custom voice
-              </button>
-            </div>
-          )}
+          {customVoices.length > 0 && (() => {
+            const found = customVoices.find((cv) => cv.voiceId === voiceStack.voice);
+            return (
+              <div className="text-[11px] text-slate-400">
+                Active voice_id:{' '}
+                <code className="font-mono text-slate-600">{voiceStack.voice}</code>
+                {found?.accent && (
+                  <>
+                    {' · '}
+                    <span className="text-slate-500">🌍 {found.accent} accent</span>
+                  </>
+                )}
+                {found?.prebaked && (
+                  <>
+                    {' · '}
+                    <span className="text-slate-500">GSB curated</span>
+                  </>
+                )}
+                {found && !found.prebaked && (
+                  <>
+                    {' · '}
+                    <button
+                      onClick={() => {
+                        if (confirm(`Remove "${found.name}"?`)) {
+                          onRemoveCustomVoice(found.id);
+                          const remaining = customVoices.filter((cv) => cv.id !== found.id);
+                          if (remaining.length > 0) {
+                            onVoiceStack({ ...voiceStack, voice: remaining[0].voiceId });
+                          } else {
+                            switchToOpenAI();
+                          }
+                        }
+                      }}
+                      className="text-slate-500 hover:text-danger underline"
+                    >
+                      remove this custom voice
+                    </button>
+                  </>
+                )}
+              </div>
+            );
+          })()}
         </div>
       )}
 

@@ -51,7 +51,27 @@ export interface CustomVoice {
   id: string;          // local UI id
   name: string;        // display name in the dropdown
   voiceId: string;     // ElevenLabs voice_id
+  prebaked?: boolean;  // true = ships with omni, can't be removed by users
+  accent?: string;     // e.g. "Kiwi", "American", "British" — surfaced as a small badge
 }
+
+/**
+ * GSB-curated default voices that ship with omni. Every operator sees these
+ * in the Custom Voices dropdown without setup. All voice_ids are cloned
+ * in the GSB ElevenLabs workspace.
+ */
+export const PREBAKED_CUSTOM_VOICES: CustomVoice[] = [
+  // Female
+  { id: 'pre-sierra', name: 'Sierra', voiceId: '0xibdd3BNglACBXTeQoJ', prebaked: true },
+  { id: 'pre-winter', name: 'Winter', voiceId: 'p1ZXM5QbQ5JtHpWB7n5M', prebaked: true },
+  { id: 'pre-autumn', name: 'Autumn', voiceId: 'ihescI8y0lnM6ikMAyGZ', prebaked: true },
+  // Male
+  { id: 'pre-sonny', name: 'Sonny', voiceId: 'HhwfzJctzawQF7G6zlbo', prebaked: true },
+  { id: 'pre-stone', name: 'Stone', voiceId: 'xUaP8oqnE6ERbbFQObbz', prebaked: true },
+  { id: 'pre-hawk', name: 'Hawk', voiceId: '2J5a0tOuiJLPoVd4xC8w', prebaked: true },
+  { id: 'pre-forest', name: 'Forest', voiceId: '2u5AAMHdRp6fmmqDm2kq', prebaked: true },
+  { id: 'pre-river', name: 'River', voiceId: '9tGUFJVKv4fLO52eYj4h', prebaked: true, accent: 'Kiwi' },
+];
 
 export function isOpenAIVoice(voice: string): boolean {
   return (VOICE_VOICE_OPTIONS as readonly string[]).includes(voice);
@@ -59,7 +79,14 @@ export function isOpenAIVoice(voice: string): boolean {
 
 const CUSTOM_VOICES_KEY = 'omni.custom_voices';
 
+/** Returns prebaked + user-added voices, merged. Prebaked always come first. */
 export function loadCustomVoices(): CustomVoice[] {
+  const user = loadUserCustomVoices();
+  return [...PREBAKED_CUSTOM_VOICES, ...user];
+}
+
+/** User-added voices only (from localStorage). */
+export function loadUserCustomVoices(): CustomVoice[] {
   if (typeof window === 'undefined') return [];
   try {
     const raw = window.localStorage.getItem(CUSTOM_VOICES_KEY);
@@ -71,10 +98,12 @@ export function loadCustomVoices(): CustomVoice[] {
   }
 }
 
+/** Saves only user-added voices to localStorage (prebaked are filtered out). */
 export function saveCustomVoices(voices: CustomVoice[]): void {
   if (typeof window === 'undefined') return;
   try {
-    window.localStorage.setItem(CUSTOM_VOICES_KEY, JSON.stringify(voices));
+    const userOnly = voices.filter((v) => !v.prebaked);
+    window.localStorage.setItem(CUSTOM_VOICES_KEY, JSON.stringify(userOnly));
   } catch {
     /* noop */
   }
