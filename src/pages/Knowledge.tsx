@@ -14,15 +14,7 @@ import { LayerIcon } from '../components/LayerIcon';
 import TemplateForm from '../components/TemplateForm';
 import TestVoiceModal from '../components/TestVoiceModal';
 import AssembledPreviewModal from '../components/AssembledPreviewModal';
-import { ChevronsRight, Phone, MessageCircle, X, Check, KeyRound } from 'lucide-react';
-import {
-  isElevenLabsConfigured,
-  getElevenLabsApiKey,
-  getElevenLabsAgentId,
-  setElevenLabsApiKey,
-  setElevenLabsAgentId,
-  clearElevenLabsCreds,
-} from '../lib/elevenLabsVoice';
+import { ChevronsRight, Phone, MessageCircle } from 'lucide-react';
 
 type KnowledgeSection = 'instructions' | 'text-edits' | 'files' | 'website';
 
