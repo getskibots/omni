@@ -15,7 +15,15 @@ import { LayerIcon } from '../components/LayerIcon';
 import TemplateForm from '../components/TemplateForm';
 import TestVoiceModal from '../components/TestVoiceModal';
 import AssembledPreviewModal from '../components/AssembledPreviewModal';
-import { ChevronsRight, Phone, MessageCircle, X } from 'lucide-react';
+import { ChevronsRight, Phone, MessageCircle, X, Check, KeyRound } from 'lucide-react';
+import {
+  isElevenLabsConfigured,
+  getElevenLabsApiKey,
+  getElevenLabsAgentId,
+  setElevenLabsApiKey,
+  setElevenLabsAgentId,
+  clearElevenLabsCreds,
+} from '../lib/elevenLabsVoice';
 
 type KnowledgeSection = 'instructions' | 'text-edits' | 'files' | 'website';
 
@@ -657,20 +665,36 @@ function AddCustomVoiceModal({
   onVoiceIdChange: (v: string) => void;
   onSave: () => void;
 }) {
+  const [apiKey, setApiKeyDraft] = useState(getElevenLabsApiKey());
+  const [agentId, setAgentIdDraft] = useState(getElevenLabsAgentId());
+  const [showCredsEdit, setShowCredsEdit] = useState(!isElevenLabsConfigured());
+  const connected = isElevenLabsConfigured() && !showCredsEdit;
+
+  const credsValid = apiKey.trim() && agentId.trim();
+  const canSave = name.trim() && voiceId.trim() && (connected || credsValid);
+
+  const handleSave = () => {
+    if (showCredsEdit && credsValid) {
+      setElevenLabsApiKey(apiKey);
+      setElevenLabsAgentId(agentId);
+    }
+    onSave();
+  };
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-ink-900/40 p-4"
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-xl shadow-xl w-full max-w-md flex flex-col overflow-hidden"
+        className="bg-white rounded-xl shadow-xl w-full max-w-lg flex flex-col overflow-hidden max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
           <div>
             <h2 className="text-base font-semibold text-ink-900">Add custom voice</h2>
             <p className="text-xs text-slate-500 mt-0.5">
-              ElevenLabs voice you've cloned or selected. Stored per-browser only.
+              ElevenLabs voice. All values stored in this browser's localStorage only.
             </p>
           </div>
           <button
@@ -682,62 +706,186 @@ function AddCustomVoiceModal({
           </button>
         </div>
 
-        <div className="p-5 space-y-4">
-          <div>
-            <label className="block text-xs text-slate-500 mb-1.5 font-medium">Display name</label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => onNameChange(e.target.value)}
-              placeholder="JH Brand Voice"
-              autoFocus
-              className="w-full text-sm px-3 py-2 border border-slate-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-botscrew-400"
-            />
-            <p className="text-[11px] text-slate-400 mt-1">
-              How it appears in the Voice dropdown.
-            </p>
+        <div className="flex-1 overflow-y-auto">
+          {/* Connection section */}
+          <div className="px-5 py-4 border-b border-slate-100 bg-slate-50/60">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <KeyRound className="h-3.5 w-3.5 text-slate-500" strokeWidth={1.75} />
+                <span className="text-xs font-semibold text-ink-900 uppercase tracking-wider">
+                  ElevenLabs Connection
+                </span>
+                {connected && (
+                  <span className="inline-flex items-center gap-1 text-[11px] text-success font-medium">
+                    <Check className="h-3 w-3" strokeWidth={2.5} /> connected
+                  </span>
+                )}
+              </div>
+              {connected ? (
+                <button
+                  onClick={() => setShowCredsEdit(true)}
+                  className="text-[11px] text-botscrew-500 hover:underline font-medium"
+                >
+                  edit
+                </button>
+              ) : isElevenLabsConfigured() ? (
+                <button
+                  onClick={() => setShowCredsEdit(false)}
+                  className="text-[11px] text-slate-500 hover:text-ink-900"
+                >
+                  cancel edit
+                </button>
+              ) : null}
+            </div>
+
+            {showCredsEdit ? (
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-[11px] text-slate-500 mb-1 font-medium">
+                    API Key
+                  </label>
+                  <input
+                    type="password"
+                    value={apiKey}
+                    onChange={(e) => setApiKeyDraft(e.target.value)}
+                    placeholder="sk_..."
+                    className="w-full text-sm font-mono px-3 py-2 border border-slate-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-botscrew-400"
+                  />
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    From{' '}
+                    <a
+                      href="https://elevenlabs.io/app/settings/api-keys"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-botscrew-500 hover:underline"
+                    >
+                      Settings → API Keys
+                    </a>
+                    .
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] text-slate-500 mb-1 font-medium">
+                    Agent ID
+                  </label>
+                  <input
+                    type="text"
+                    value={agentId}
+                    onChange={(e) => setAgentIdDraft(e.target.value)}
+                    placeholder="paste agent_id"
+                    className="w-full text-sm font-mono px-3 py-2 border border-slate-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-botscrew-400"
+                  />
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    From{' '}
+                    <a
+                      href="https://elevenlabs.io/app/conversational-ai"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-botscrew-500 hover:underline"
+                    >
+                      Conversational AI → Agents
+                    </a>
+                    . The agent must have "Allow overrides" enabled.
+                  </p>
+                </div>
+
+                {isElevenLabsConfigured() && (
+                  <button
+                    onClick={() => {
+                      if (confirm('Disconnect ElevenLabs from this browser?')) {
+                        clearElevenLabsCreds();
+                        setApiKeyDraft('');
+                        setAgentIdDraft('');
+                      }
+                    }}
+                    className="text-[11px] text-slate-500 hover:text-danger underline"
+                  >
+                    forget current creds
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="text-[11px] text-slate-500">
+                API key + Agent ID saved. <em>Click "edit" above to change them.</em>
+              </div>
+            )}
           </div>
 
-          <div>
-            <label className="block text-xs text-slate-500 mb-1.5 font-medium">
-              ElevenLabs voice_id
-            </label>
-            <input
-              type="text"
-              value={voiceId}
-              onChange={(e) => onVoiceIdChange(e.target.value)}
-              placeholder="e.g. 21m00Tcm4TlvDq8ikWAM"
-              className="w-full text-sm font-mono px-3 py-2 border border-slate-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-botscrew-400"
-            />
-            <p className="text-[11px] text-slate-400 mt-1">
-              Find at{' '}
-              <a
-                href="https://elevenlabs.io/app/voice-library"
-                target="_blank"
-                rel="noreferrer"
-                className="text-botscrew-500 hover:underline"
-              >
-                elevenlabs.io → Voice Library
-              </a>{' '}
-              (your clones + their library). Click a voice → copy ID.
-            </p>
+          {/* Voice section */}
+          <div className="px-5 py-4 space-y-4">
+            <div className="text-xs font-semibold text-ink-900 uppercase tracking-wider">
+              Voice
+            </div>
+
+            <div>
+              <label className="block text-xs text-slate-500 mb-1.5 font-medium">
+                Display name
+              </label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => onNameChange(e.target.value)}
+                placeholder="JH Brand Voice"
+                autoFocus
+                className="w-full text-sm px-3 py-2 border border-slate-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-botscrew-400"
+              />
+              <p className="text-[11px] text-slate-400 mt-1">
+                How it appears in the Voice dropdown.
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-xs text-slate-500 mb-1.5 font-medium">
+                voice_id
+              </label>
+              <input
+                type="text"
+                value={voiceId}
+                onChange={(e) => onVoiceIdChange(e.target.value)}
+                placeholder="e.g. pNInz6obpgDQGcFmaJgB"
+                className="w-full text-sm font-mono px-3 py-2 border border-slate-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-botscrew-400"
+              />
+              <p className="text-[11px] text-slate-400 mt-1">
+                From{' '}
+                <a
+                  href="https://elevenlabs.io/app/voice-library"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-botscrew-500 hover:underline"
+                >
+                  Voice Library
+                </a>{' '}
+                — click a voice → copy ID. (Adam default:{' '}
+                <code className="font-mono">pNInz6obpgDQGcFmaJgB</code>)
+              </p>
+            </div>
           </div>
         </div>
 
-        <div className="px-5 py-3 border-t border-slate-200 flex items-center justify-end gap-2 bg-slate-50">
-          <button
-            onClick={onClose}
-            className="px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-ink-900"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={onSave}
-            disabled={!name.trim() || !voiceId.trim()}
-            className="px-4 py-1.5 text-sm font-medium bg-action-500 hover:bg-action-600 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Add voice
-          </button>
+        <div className="px-5 py-3 border-t border-slate-200 flex items-center justify-between gap-2 bg-slate-50">
+          <div className="text-[11px] text-slate-500">
+            {!connected && !credsValid
+              ? '⚠ ElevenLabs connection needed before saving'
+              : connected
+                ? '✓ Ready to save'
+                : '✓ Will save voice + connect ElevenLabs'}
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onClose}
+              className="px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-ink-900"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={!canSave}
+              className="px-4 py-1.5 text-sm font-medium bg-action-500 hover:bg-action-600 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {connected ? 'Add voice' : 'Save voice + connect'}
+            </button>
+          </div>
         </div>
       </div>
     </div>
