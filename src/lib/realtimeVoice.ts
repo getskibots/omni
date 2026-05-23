@@ -69,11 +69,13 @@ export async function startRealtimeSession({
   let botBuffer = '';
 
   dc.onopen = () => {
-    // Configure session over the data channel
+    // Configure session over the data channel. GA requires session.type inside
+    // the session object (in addition to the URL param at call creation).
     dc.send(
       JSON.stringify({
         type: 'session.update',
         session: {
+          type: 'realtime',
           instructions: systemPrompt,
           voice,
           modalities: ['audio', 'text'],
