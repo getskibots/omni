@@ -46,6 +46,39 @@ export const VOICE_TRANSCRIPTION_OPTIONS = [
   'gpt-4o-transcribe',
 ] as const;
 
+export interface CustomVoice {
+  id: string;          // local UI id
+  name: string;        // display name in the dropdown
+  voiceId: string;     // ElevenLabs voice_id
+}
+
+export function isOpenAIVoice(voice: string): boolean {
+  return (VOICE_VOICE_OPTIONS as readonly string[]).includes(voice);
+}
+
+const CUSTOM_VOICES_KEY = 'omni.custom_voices';
+
+export function loadCustomVoices(): CustomVoice[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = window.localStorage.getItem(CUSTOM_VOICES_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveCustomVoices(voices: CustomVoice[]): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(CUSTOM_VOICES_KEY, JSON.stringify(voices));
+  } catch {
+    /* noop */
+  }
+}
+
 export const PARENT_MODEL_OPTIONS = [
   'gpt-5.5',
   'gpt-5.5-mini',
