@@ -1250,7 +1250,7 @@ function layerMeta(id: LayerId) {
     case 'voice':
       return {
         title: 'Voice',
-        subtitle: 'Phone calls via Twilio. Spoken responses — appended to the Parent.',
+        subtitle: 'Voice specific instructions, welcome message and more.',
         hint: 'This override is appended to the Parent when Voice handles a call.',
         placeholder: 'Add voice-specific rules…',
       };
