@@ -291,9 +291,7 @@ function Instructions() {
               <div>
                 <div className="text-sm font-semibold text-ink-900">Welcome message</div>
                 <p className="text-xs text-slate-500">
-                  First thing the bot says when a call connects. Sent as ElevenLabs
-                  <code className="mx-1 font-mono">firstMessage</code> override · injected into the
-                  OpenAI Realtime prompt as the opening line.
+                  First thing the bot says when a call connects.
                 </p>
               </div>
             </div>
@@ -541,13 +539,13 @@ function VoiceModelRow({
         <ProviderTab
           active={isOpenAI}
           onClick={() => !isOpenAI && switchToOpenAI()}
-          label="OpenAI Realtime"
+          label="Built-in voices"
           subLabel="built-in voices"
         />
         <ProviderTab
           active={!isOpenAI}
           onClick={() => isOpenAI && switchToCustom()}
-          label="Custom (ElevenLabs)"
+          label="Custom voices"
           subLabel={
             customVoices.length > 0
               ? `${customVoices.length} voice${customVoices.length === 1 ? '' : 's'}`
@@ -596,7 +594,7 @@ function VoiceModelRow({
           <button
             onClick={onTestVoice}
             className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium bg-botscrew-500 hover:bg-botscrew-600 text-white rounded-md whitespace-nowrap shadow-sm"
-            title="Test using OpenAI Realtime"
+            title="Test the voice prompt"
           >
             <Phone className="h-3.5 w-3.5" strokeWidth={2} />
             Test Voice AI
@@ -637,7 +635,7 @@ function VoiceModelRow({
             <button
               onClick={onTestVoice}
               className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium bg-botscrew-500 hover:bg-botscrew-600 text-white rounded-md whitespace-nowrap shadow-sm"
-              title="Test using ElevenLabs Conversational AI"
+              title="Test the voice prompt"
             >
               <Phone className="h-3.5 w-3.5" strokeWidth={2} />
               Test Voice AI

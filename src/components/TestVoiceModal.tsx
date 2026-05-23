@@ -245,7 +245,7 @@ export default function TestVoiceModal({
       {
         id: id(),
         from: 'bot',
-        text: 'Connecting via OpenAI Realtime… allow microphone access if prompted.',
+        text: 'Connecting… allow microphone access if prompted.',
       },
     ]);
     botMsgIdRef.current = null;
@@ -304,7 +304,7 @@ export default function TestVoiceModal({
       {
         id: id(),
         from: 'bot',
-        text: 'Connecting via ElevenLabs… allow microphone access if prompted.',
+        text: 'Connecting… allow microphone access if prompted.',
       },
     ]);
 
@@ -337,7 +337,7 @@ export default function TestVoiceModal({
       });
       elSessionRef.current = session;
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to start ElevenLabs session');
+      setError(e instanceof Error ? e.message : 'Failed to start voice session');
       setRtState('error');
     }
   };
@@ -401,11 +401,11 @@ export default function TestVoiceModal({
               elConfigured ? (
                 <>
                   <CheckCircle2 className="h-3 w-3 text-success" strokeWidth={2} />
-                  <span className="text-success font-medium">ElevenLabs</span>
+                  <span className="text-success font-medium">Live voice</span>
                   <button
                     onClick={forgetElCreds}
                     className="ml-1 text-[10px] text-slate-400 hover:text-danger underline"
-                    title="Remove ElevenLabs API key + agent ID from this browser"
+                    title="Remove voice service key from this browser"
                   >
                     forget creds
                   </button>
@@ -413,7 +413,7 @@ export default function TestVoiceModal({
               ) : (
                 <>
                   <Sparkles className="h-3 w-3 text-amber-500" strokeWidth={2} />
-                  <span className="text-amber-600 font-medium">ElevenLabs not connected</span>
+                  <span className="text-amber-600 font-medium">Voice not connected</span>
                   <button
                     onClick={() => setShowElKeyInput(true)}
                     className="ml-1 text-[10px] text-botscrew-500 hover:underline font-medium"
@@ -453,7 +453,7 @@ export default function TestVoiceModal({
           <div className="px-5 py-3 bg-amber-50 border-b border-amber-200 space-y-2">
             <div className="flex items-center justify-between">
               <div className="text-xs text-ink-900 font-semibold">
-                Connect ElevenLabs (API key + agent ID)
+                Connect voice service
               </div>
               <button
                 onClick={() => setShowElKeyInput(false)}
@@ -595,8 +595,8 @@ export default function TestVoiceModal({
                 title={
                   usesElevenLabs
                     ? elConfigured
-                      ? 'Start an ElevenLabs Conversational AI session'
-                      : 'Connect ElevenLabs first'
+                      ? 'Start a voice session'
+                      : 'Connect voice service first'
                     : apiConnected
                       ? 'Start an OpenAI realtime session'
                       : 'Connect OpenAI API key first'
