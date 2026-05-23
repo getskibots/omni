@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   jacksonHole,
   renderTemplate,
@@ -98,21 +98,85 @@ function KnowledgeLayersRail({
   );
 }
 
+const STORAGE_KEY = `omni.parent.${jacksonHole.id}`;
+
+interface PersistedState {
+  template: ResortTemplate;
+  parentPrompt: string;
+  chatPrompt: string;
+  voicePrompt: string;
+  emailPrompt: string;
+  voiceStack: VoiceStack;
+  model: string;
+  savedAt: number;
+}
+
+function loadFromStorage(): Partial<PersistedState> | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as PersistedState;
+  } catch {
+    return null;
+  }
+}
+
 function Instructions() {
   const voiceChannel = jacksonHole.channels[1];
-  const [parentPrompt, setParentPrompt] = useState(jacksonHole.systemRolePrompt);
-  const [model, setModel] = useState(jacksonHole.defaultModel);
-  const [chatPrompt, setChatPrompt] = useState(jacksonHole.channels[0].overridePrompt);
-  const [voicePrompt, setVoicePrompt] = useState(voiceChannel.overridePrompt);
-  const [emailPrompt, setEmailPrompt] = useState(jacksonHole.channels[2].overridePrompt);
+  const persisted = loadFromStorage();
+  const [parentPrompt, setParentPrompt] = useState(
+    persisted?.parentPrompt ?? jacksonHole.systemRolePrompt,
+  );
+  const [model, setModel] = useState(persisted?.model ?? jacksonHole.defaultModel);
+  const [chatPrompt, setChatPrompt] = useState(
+    persisted?.chatPrompt ?? jacksonHole.channels[0].overridePrompt,
+  );
+  const [voicePrompt, setVoicePrompt] = useState(
+    persisted?.voicePrompt ?? voiceChannel.overridePrompt,
+  );
+  const [emailPrompt, setEmailPrompt] = useState(
+    persisted?.emailPrompt ?? jacksonHole.channels[2].overridePrompt,
+  );
   const [voiceStack, setVoiceStack] = useState<VoiceStack>(
-    voiceChannel.voiceStack ?? { model: 'gpt-realtime', voice: 'ash', transcriptionModel: 'whisper-1' },
+    persisted?.voiceStack ??
+      voiceChannel.voiceStack ??
+      { model: 'gpt-realtime', voice: 'ash', transcriptionModel: 'whisper-1' },
   );
   const [activeLayer, setActiveLayer] = useState<LayerId>('parent');
   const [parentSubTab, setParentSubTab] = useState<'template' | 'customization'>('template');
   const [testChannel, setTestChannel] = useState<'chat' | 'voice' | null>(null);
-  // Lift Preset (template) state up so the assembled prompt can include it.
-  const [template, setTemplate] = useState<ResortTemplate>(jacksonHole.template);
+  const [template, setTemplate] = useState<ResortTemplate>(
+    persisted?.template ?? jacksonHole.template,
+  );
+  const [savedAt, setSavedAt] = useState<number | null>(persisted?.savedAt ?? null);
+  const [savedFlash, setSavedFlash] = useState(false);
+
+  const save = () => {
+    const data: PersistedState = {
+      template,
+      parentPrompt,
+      chatPrompt,
+      voicePrompt,
+      emailPrompt,
+      voiceStack,
+      model,
+      savedAt: Date.now(),
+    };
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      setSavedAt(data.savedAt);
+      setSavedFlash(true);
+    } catch (e) {
+      console.error('Save failed', e);
+    }
+  };
+
+  useEffect(() => {
+    if (!savedFlash) return;
+    const t = setTimeout(() => setSavedFlash(false), 1800);
+    return () => clearTimeout(t);
+  }, [savedFlash]);
 
   // Full assembled Parent prompt = Preset (rendered) + Custom Instructions.
   const assembledParent = useMemo(
@@ -233,14 +297,40 @@ function Instructions() {
       )}
 
       <footer className="flex items-center justify-between pt-2">
-        <button className="text-sm font-medium text-botscrew-500 hover:text-botscrew-600">
+        <button
+          onClick={() => {
+            if (
+              confirm(
+                'Discard local edits and restore the GSB defaults for this resort? (Wipes saved Preset, Custom Instructions, and channel overrides on this device.)',
+              )
+            ) {
+              try {
+                window.localStorage.removeItem(STORAGE_KEY);
+              } catch {
+                /* noop */
+              }
+              window.location.reload();
+            }
+          }}
+          className="text-sm font-medium text-botscrew-500 hover:text-botscrew-600"
+        >
           Reset to default
         </button>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 text-xs text-slate-500">
+          {savedFlash ? (
+            <span className="inline-flex items-center gap-1 text-success font-medium">
+              ✓ Saved
+            </span>
+          ) : savedAt ? (
+            <span>Last saved {new Date(savedAt).toLocaleTimeString()}</span>
+          ) : null}
           <button className="px-4 py-2 text-sm font-medium border border-slate-300 rounded-md hover:bg-slate-50">
             Preview assembled
           </button>
-          <button className="px-4 py-2 text-sm font-medium bg-action-500 hover:bg-action-600 text-white rounded-md">
+          <button
+            onClick={save}
+            className="px-4 py-2 text-sm font-medium bg-action-500 hover:bg-action-600 text-white rounded-md"
+          >
             Save changes
           </button>
         </div>
