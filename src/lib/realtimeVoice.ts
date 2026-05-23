@@ -69,34 +69,30 @@ export async function startRealtimeSession({
   let botBuffer = '';
 
   dc.onopen = () => {
-    // Configure session over the data channel. GA requires session.type inside
-    // the session object (in addition to the URL param at call creation).
-    dc.send(
-      JSON.stringify({
-        type: 'session.update',
-        session: {
-          type: 'realtime',
-          instructions: systemPrompt,
-          voice,
-          modalities: ['audio', 'text'],
-          input_audio_format: 'pcm16',
-          output_audio_format: 'pcm16',
-          input_audio_transcription: { model: 'whisper-1' },
-          turn_detection: {
-            type: 'server_vad',
-            threshold: 0.5,
-            prefix_padding_ms: 300,
-            silence_duration_ms: 500,
-          },
+    // Minimal session.update — set instructions, voice, and transcription.
+    // Avoid optional fields (modalities/audio_format/turn_detection) since
+    // schema changed between Beta and GA and any unknown field rejects.
+    const payload = {
+      type: 'session.update',
+      session: {
+        type: 'realtime',
+        instructions: systemPrompt,
+        audio: {
+          output: { voice },
+          input: { transcription: { model: 'whisper-1' } },
         },
-      }),
-    );
+      },
+    };
+    console.log('[realtime] >> session.update', payload);
+    dc.send(JSON.stringify(payload));
     handlers.onState('connected');
   };
 
   dc.onmessage = (e) => {
     try {
       const event = JSON.parse(e.data);
+      // Verbose log so we can diagnose session.update / response shapes
+      console.log('[realtime] <<', event.type, event);
       switch (event.type) {
         case 'conversation.item.input_audio_transcription.completed':
           if (event.transcript) handlers.onUserTranscript(event.transcript);
@@ -112,7 +108,9 @@ export async function startRealtimeSession({
           botBuffer = '';
           break;
         case 'error':
-          handlers.onError(event.error?.message ?? 'Realtime error');
+          handlers.onError(
+            event.error?.message ?? event.error?.type ?? 'Realtime API error',
+          );
           break;
       }
     } catch {
