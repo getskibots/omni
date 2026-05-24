@@ -1,6 +1,17 @@
 export type ChannelStatus = 'active' | 'not-connected';
 export type LayerId = 'parent' | 'chat' | 'voice' | 'email';
 
+/**
+ * Per-resort ElevenLabs Conversational AI agent ID.
+ *
+ * Each resort gets its own agent (so we can override LLM, voice, system prompt
+ * via the omni dashboard). This default ships with omni so the user never has
+ * to paste it. Override via localStorage if testing a different agent.
+ *
+ * When omni gets a real backend, this moves to the resort config table.
+ */
+export const DEFAULT_ELEVENLABS_AGENT_ID = 'agent_4801ks9kyskcfgetyq0krbqj10cm';
+
 export interface VoiceStack {
   model: string;
   voice: string;

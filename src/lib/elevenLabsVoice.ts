@@ -15,6 +15,7 @@
 
 import { Conversation } from '@elevenlabs/client';
 import { USE_PROXY } from './proxyMode';
+import { DEFAULT_ELEVENLABS_AGENT_ID } from '../data/parent';
 
 export type ElevenLabsConnectionState = 'idle' | 'connecting' | 'connected' | 'error';
 
@@ -44,8 +45,12 @@ export function setElevenLabsApiKey(key: string): void {
 }
 
 export function getElevenLabsAgentId(): string {
-  if (typeof window === 'undefined') return '';
-  return window.localStorage.getItem(LS_AGENT_ID) ?? '';
+  // Per-resort config — falls back to the JH default baked into parent.ts so
+  // the user never has to paste it. localStorage override wins if present
+  // (lets you test a different agent without rebuilding).
+  if (typeof window === 'undefined') return DEFAULT_ELEVENLABS_AGENT_ID;
+  const stored = window.localStorage.getItem(LS_AGENT_ID);
+  return stored && stored.trim() ? stored : DEFAULT_ELEVENLABS_AGENT_ID;
 }
 
 export function setElevenLabsAgentId(id: string): void {
