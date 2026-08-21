@@ -172,3 +172,70 @@ export function buildContacts(headers: string[], rows: string[][], map: ColumnMa
 }
 
 export const validCount = (list: OutreachList) => list.contacts.filter((c) => c.phoneValid).length
+
+// ── Scripts (the call "flow" — Option A: talking-point sections) ──────────────
+// Not a branching flowchart: a brief the Voice AI navigates. These sections
+// assemble into the single agent instruction the probe-voice engine runs
+// (opening → on-pickup greeting; the rest → its guidance).
+export interface ScriptSections {
+  goal: string // the one thing this call is for
+  opening: string // first line on pickup (personalized with {{merge_fields}})
+  points: string // facts/offers to work in
+  knowledge: string // what it can answer from (plus the resort's Omni knowledge)
+  ask: string // the call-to-action
+  guardrails: string // don'ts + opt-out handling
+  voicemail: string // what to do if no answer
+}
+
+export interface OutreachScript {
+  id: string
+  name: string
+  sections: ScriptSections
+  voice: string // OpenAI voice name (e.g. "ash") or a custom voice_id
+  createdAt: number
+  updatedAt: number
+}
+
+const SCRIPTS_KEY = 'omni.outreach.scripts'
+
+export function loadScripts(): OutreachScript[] {
+  if (typeof window === 'undefined') return []
+  try {
+    const raw = window.localStorage.getItem(SCRIPTS_KEY)
+    return raw ? (JSON.parse(raw) as OutreachScript[]) : []
+  } catch {
+    return []
+  }
+}
+
+export function saveScripts(scripts: OutreachScript[]): void {
+  try {
+    window.localStorage.setItem(SCRIPTS_KEY, JSON.stringify(scripts))
+  } catch {
+    /* quota — real storage lands with Supabase */
+  }
+}
+
+// A sensible opt-out/compliance default so no script ships with empty guardrails.
+export const DEFAULT_GUARDRAILS =
+  "If they ask to stop or be removed, apologize warmly and confirm we'll take them off the list. Never invent prices, dates, or availability — if you're unsure, offer to follow up. Keep it brief, friendly, and never pushy."
+
+export function emptySections(): ScriptSections {
+  return {
+    goal: '',
+    opening: '',
+    points: '',
+    knowledge: '',
+    ask: '',
+    guardrails: DEFAULT_GUARDRAILS,
+    voicemail: '',
+  }
+}
+
+// Merge fields available for personalization = "name" + every extra column seen
+// across saved audiences. Slice 3 fills these per contact at call time.
+export function mergeFields(): string[] {
+  const keys = new Set<string>(['name'])
+  for (const l of loadLists()) for (const c of l.contacts) for (const k of Object.keys(c.fields)) keys.add(k)
+  return [...keys]
+}

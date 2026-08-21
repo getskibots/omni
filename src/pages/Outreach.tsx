@@ -22,6 +22,11 @@ import {
   type OutreachList,
   type ColumnMap,
 } from '../lib/outreach'
+import OutreachMessageStep from '../components/OutreachMessageStep'
+
+// The active resort/account. Hardcoded for the prototype; comes from the account
+// context when Outreach productionizes.
+const RESORT = 'Jackson Hole'
 
 // The Outreach spine — the mental model borrowed from every marketing tool:
 // Audience → Message → Launch → Results. Slice 1 ships the Audience step; the
@@ -59,7 +64,10 @@ export default function Outreach() {
 
       <div className="mt-6 max-w-5xl">
         {step === 'audience' && <AudienceStep />}
-        {step !== 'audience' && <ComingNext step={STEPS.find((s) => s.id === step)!} />}
+        {step === 'message' && <OutreachMessageStep resortName={RESORT} />}
+        {(step === 'launch' || step === 'results') && (
+          <ComingNext step={STEPS.find((s) => s.id === step)!} />
+        )}
       </div>
     </div>
   )
