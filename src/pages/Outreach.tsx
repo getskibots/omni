@@ -27,10 +27,18 @@ import {
 // Audience → Message → Launch → Results. Slice 1 ships the Audience step; the
 // rest are visible so the shape of the product reads immediately.
 type StepId = 'audience' | 'message' | 'launch' | 'results'
-const STEPS: { id: StepId; label: string; Icon: typeof Users; hint: string; live: boolean }[] = [
+const STEPS: {
+  id: StepId
+  label: string
+  Icon: typeof Users
+  emoji?: string
+  hint: string
+  live: boolean
+}[] = [
   { id: 'audience', label: 'Audience', Icon: Users, hint: 'Who to call', live: true },
   { id: 'message', label: 'Message', Icon: MessageSquareQuote, hint: 'Script + voice', live: false },
-  { id: 'launch', label: 'Launch', Icon: Rocket, hint: 'Review + dial', live: false },
+  // Ski slang: "launch it / send it" — a skier flying off a jump.
+  { id: 'launch', label: 'Launch It', Icon: Rocket, emoji: '⛷️', hint: 'Review + dial', live: false },
   { id: 'results', label: 'Results', Icon: BarChart3, hint: 'Transcripts + outcomes', live: false },
 ]
 
@@ -80,7 +88,11 @@ function StepSpine({ active, onSelect }: { active: StepId; onSelect: (s: StepId)
               >
                 {i + 1}
               </span>
-              <s.Icon className={`h-4 w-4 ${isActive ? 'text-botscrew-600' : 'text-slate-500'}`} />
+              {s.emoji ? (
+                <span className="text-base leading-none">{s.emoji}</span>
+              ) : (
+                <s.Icon className={`h-4 w-4 ${isActive ? 'text-botscrew-600' : 'text-slate-500'}`} />
+              )}
               <span className="text-sm font-semibold text-ink-900">{s.label}</span>
               {!s.live && (
                 <span className="ml-auto text-[10px] font-semibold uppercase tracking-wide text-slate-400">
@@ -99,7 +111,11 @@ function StepSpine({ active, onSelect }: { active: StepId; onSelect: (s: StepId)
 function ComingNext({ step }: { step: (typeof STEPS)[number] }) {
   return (
     <div className="bg-white border border-slate-200 rounded-xl shadow-card p-10 text-center">
-      <step.Icon className="h-8 w-8 text-slate-300 mx-auto" />
+      {step.emoji ? (
+        <div className="text-4xl leading-none">{step.emoji}</div>
+      ) : (
+        <step.Icon className="h-8 w-8 text-slate-300 mx-auto" />
+      )}
       <div className="text-lg font-semibold text-ink-900 mt-3">{step.label} — coming next</div>
       <p className="text-sm text-slate-500 mt-1 max-w-md mx-auto">
         {step.id === 'message' &&
