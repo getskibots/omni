@@ -5,6 +5,7 @@ import {
   Rocket,
   BarChart3,
   Upload,
+  Download,
   Trash2,
   AlertTriangle,
   CheckCircle2,
@@ -231,6 +232,22 @@ function ListCard({ list, onDelete }: { list: OutreachList; onDelete: () => void
 }
 
 // ── CSV import flow ───────────────────────────────────────────────────────────
+// A starter CSV (headers + example rows) so resorts know the exact format —
+// name + phone + email, then extra columns that become {{merge_fields}}.
+function downloadTemplate() {
+  const csv = [
+    'first_name,phone,email,arrival_date,resort,pass_type',
+    'Jane Skier,970-555-1212,jane@example.com,Dec 5,Mt Quinnski,Freedom Pass',
+    'Bob Rider,(303) 867-5309,bob@example.com,Dec 6,Mt Quinnski,Day Ticket',
+  ].join('\n')
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }))
+  const a = document.createElement('a')
+  a.href = url
+  a.download = 'outreach-template.csv'
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 function ImportCard({
   onCancel,
   onSave,
@@ -321,6 +338,15 @@ function ImportCard({
                 A header row plus name + phone columns. Extra columns become merge fields.
               </div>
             </button>
+            <div className="mt-3 flex items-center justify-center">
+              <button
+                onClick={downloadTemplate}
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-botscrew-500 hover:text-botscrew-600"
+              >
+                <Download className="h-3.5 w-3.5" strokeWidth={2} />
+                Download a CSV template
+              </button>
+            </div>
             {error && <p className="text-sm text-danger mt-3">{error}</p>}
           </div>
         ) : (
