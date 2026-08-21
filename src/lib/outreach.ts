@@ -239,3 +239,72 @@ export function mergeFields(): string[] {
   for (const l of loadLists()) for (const c of l.contacts) for (const k of Object.keys(c.fields)) keys.add(k)
   return [...keys]
 }
+
+// Replace {{tokens}} with this contact's data (name + CSV merge fields).
+export function fillMerge(text: string, contact: Pick<OutreachContact, 'name' | 'fields'>): string {
+  return text.replace(/\{\{\s*([\w.-]+)\s*\}\}/g, (_m, key: string) => {
+    if (key === 'name' || key === 'first_name') return contact.name || 'there'
+    return contact.fields[key] ?? ''
+  })
+}
+
+// Assemble the talking-point sections into the single agent brief the probe-voice
+// engine runs (converse/agent mode). Fill merge fields FIRST, per contact.
+export function assembleBrief(s: ScriptSections, resort: string): string {
+  const parts = [
+    `You're a warm, natural voice agent making an OUTBOUND call for ${resort}. You are the CALLER — keep it brief and human, a real phone conversation, never a script read aloud.`,
+    s.opening.trim() && `Open the call warmly, in your own words, along the lines of: "${s.opening.trim()}"`,
+    s.goal.trim() && `GOAL OF THE CALL: ${s.goal.trim()}`,
+    s.points.trim() && `WORK THESE POINTS IN naturally (don't list them):\n${s.points.trim()}`,
+    s.knowledge.trim() && `YOU CAN ANSWER QUESTIONS ABOUT:\n${s.knowledge.trim()}`,
+    s.ask.trim() && `STEER TOWARD THIS ASK: ${s.ask.trim()}`,
+    s.guardrails.trim() && `RULES:\n${s.guardrails.trim()}`,
+    s.voicemail.trim() && `IF IT GOES TO VOICEMAIL: ${s.voicemail.trim()}`,
+    `When the conversation naturally wraps up, thank them and end the call.`,
+  ].filter(Boolean)
+  return parts.join('\n\n')
+}
+
+// ── Campaign runs (the Launch It → Results record) ────────────────────────────
+export type CallStatus = 'queued' | 'dialing' | 'live' | 'done' | 'failed' | 'skipped'
+
+export interface OutreachCall {
+  contactId: string
+  name: string
+  phone: string
+  status: CallStatus
+  jobId?: string
+  callSid?: string
+  outcome?: string // endedReason / simple disposition
+  transcript?: { role: string; text: string }[]
+  error?: string
+}
+
+export interface OutreachRun {
+  id: string
+  name: string
+  audienceId: string
+  scriptId: string
+  startedAt: number
+  calls: OutreachCall[]
+}
+
+const RUNS_KEY = 'omni.outreach.runs'
+
+export function loadRuns(): OutreachRun[] {
+  if (typeof window === 'undefined') return []
+  try {
+    const raw = window.localStorage.getItem(RUNS_KEY)
+    return raw ? (JSON.parse(raw) as OutreachRun[]) : []
+  } catch {
+    return []
+  }
+}
+
+export function saveRuns(runs: OutreachRun[]): void {
+  try {
+    window.localStorage.setItem(RUNS_KEY, JSON.stringify(runs.slice(0, 50)))
+  } catch {
+    /* quota — real storage lands with Supabase */
+  }
+}

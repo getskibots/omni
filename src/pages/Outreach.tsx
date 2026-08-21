@@ -23,6 +23,8 @@ import {
   type ColumnMap,
 } from '../lib/outreach'
 import OutreachMessageStep from '../components/OutreachMessageStep'
+import OutreachLaunchStep from '../components/OutreachLaunchStep'
+import OutreachResultsStep from '../components/OutreachResultsStep'
 
 // The active resort/account. Hardcoded for the prototype; comes from the account
 // context when Outreach productionizes.
@@ -41,10 +43,10 @@ const STEPS: {
   live: boolean
 }[] = [
   { id: 'audience', label: 'Audience', Icon: Users, hint: 'Who to call', live: true },
-  { id: 'message', label: 'Message', Icon: MessageSquareQuote, hint: 'Script + voice', live: false },
+  { id: 'message', label: 'Message', Icon: MessageSquareQuote, hint: 'Script + voice', live: true },
   // Ski slang: "launch it / send it" — a skier flying off a jump.
-  { id: 'launch', label: 'Launch It', Icon: Rocket, emoji: '⛷️', hint: 'Review + dial', live: false },
-  { id: 'results', label: 'Results', Icon: BarChart3, hint: 'Transcripts + outcomes', live: false },
+  { id: 'launch', label: 'Launch It', Icon: Rocket, emoji: '⛷️', hint: 'Review + dial', live: true },
+  { id: 'results', label: 'Results', Icon: BarChart3, hint: 'Transcripts + outcomes', live: true },
 ]
 
 export default function Outreach() {
@@ -65,9 +67,8 @@ export default function Outreach() {
       <div className="mt-6 max-w-5xl">
         {step === 'audience' && <AudienceStep />}
         {step === 'message' && <OutreachMessageStep resortName={RESORT} />}
-        {(step === 'launch' || step === 'results') && (
-          <ComingNext step={STEPS.find((s) => s.id === step)!} />
-        )}
+        {step === 'launch' && <OutreachLaunchStep resortName={RESORT} />}
+        {step === 'results' && <OutreachResultsStep />}
       </div>
     </div>
   )
@@ -112,27 +113,6 @@ function StepSpine({ active, onSelect }: { active: StepId; onSelect: (s: StepId)
           </button>
         )
       })}
-    </div>
-  )
-}
-
-function ComingNext({ step }: { step: (typeof STEPS)[number] }) {
-  return (
-    <div className="bg-white border border-slate-200 rounded-xl shadow-card p-10 text-center">
-      {step.emoji ? (
-        <div className="text-4xl leading-none">{step.emoji}</div>
-      ) : (
-        <step.Icon className="h-8 w-8 text-slate-300 mx-auto" />
-      )}
-      <div className="text-lg font-semibold text-ink-900 mt-3">{step.label} — coming next</div>
-      <p className="text-sm text-slate-500 mt-1 max-w-md mx-auto">
-        {step.id === 'message' &&
-          'Compose the call script (talking-points style), pick the voice, and attach knowledge the AI can draw on.'}
-        {step.id === 'launch' &&
-          'Review the audience, caller numbers, and pace — test-call yourself, then start dialing.'}
-        {step.id === 'results' &&
-          'Watch each call land live: status, transcript, and outcome per contact.'}
-      </p>
     </div>
   )
 }
