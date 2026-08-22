@@ -7,7 +7,7 @@
  * this one seam and the UI never changes.
  */
 
-export type ListSource = 'csv' | 'api'
+export type ListSource = 'csv' | 'api' | 'manual'
 
 export interface OutreachContact {
   id: string
@@ -172,6 +172,20 @@ export function buildContacts(headers: string[], rows: string[][], map: ColumnMa
 }
 
 export const validCount = (list: OutreachList) => list.contacts.filter((c) => c.phoneValid).length
+
+// Parse pasted phone numbers (newline/comma/semicolon separated) into contacts —
+// the mobile-friendly "Add numbers" path, no CSV file needed.
+export function parseNumbers(text: string): OutreachContact[] {
+  return text
+    .split(/[\n,;]+/)
+    .map((t) => t.trim())
+    .filter(Boolean)
+    .map((raw) => {
+      const { e164, valid } = normalizePhone(raw)
+      return { id: newId(), name: '', phone: e164, phoneValid: valid, fields: {} }
+    })
+    .filter((c) => c.phone)
+}
 
 // ── Scripts (the call "flow" — Option A: talking-point sections) ──────────────
 // Not a branching flowchart: a brief the Voice AI navigates. These sections

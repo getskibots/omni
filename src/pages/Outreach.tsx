@@ -6,6 +6,7 @@ import {
   BarChart3,
   Upload,
   Download,
+  Plus,
   Trash2,
   AlertTriangle,
   CheckCircle2,
@@ -16,6 +17,7 @@ import {
   saveLists,
   newId,
   parseCsv,
+  parseNumbers,
   buildContacts,
   guessColumns,
   validCount,
@@ -121,6 +123,7 @@ function StepSpine({ active, onSelect }: { active: StepId; onSelect: (s: StepId)
 function AudienceStep() {
   const [lists, setLists] = useState<OutreachList[]>(() => loadLists())
   const [importing, setImporting] = useState(false)
+  const [pasting, setPasting] = useState(false)
 
   const persist = (next: OutreachList[]) => {
     setLists(next)
@@ -142,14 +145,23 @@ function AudienceStep() {
             able to connect a live data source via API.
           </p>
         </div>
-        {!importing && (
-          <button
-            onClick={() => setImporting(true)}
-            className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium bg-action-500 hover:bg-action-600 text-white rounded-md shadow-sm"
-          >
-            <Upload className="h-4 w-4" strokeWidth={2} />
-            Import CSV
-          </button>
+        {!importing && !pasting && (
+          <div className="flex gap-2">
+            <button
+              onClick={() => setPasting(true)}
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium bg-white border border-slate-300 text-ink-900 hover:bg-slate-50 rounded-md shadow-sm"
+            >
+              <Plus className="h-4 w-4" strokeWidth={2} />
+              Add numbers
+            </button>
+            <button
+              onClick={() => setImporting(true)}
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium bg-action-500 hover:bg-action-600 text-white rounded-md shadow-sm"
+            >
+              <Upload className="h-4 w-4" strokeWidth={2} />
+              Import CSV
+            </button>
+          </div>
         )}
       </div>
 
@@ -163,7 +175,17 @@ function AudienceStep() {
         />
       )}
 
-      {!importing && lists.length === 0 && (
+      {pasting && (
+        <PasteCard
+          onCancel={() => setPasting(false)}
+          onSave={(list) => {
+            persist([list, ...lists])
+            setPasting(false)
+          }}
+        />
+      )}
+
+      {!importing && !pasting && lists.length === 0 && (
         <div className="bg-white border border-dashed border-slate-300 rounded-xl p-12 text-center">
           <Users className="h-8 w-8 text-slate-300 mx-auto" />
           <div className="text-base font-semibold text-ink-900 mt-3">No audiences yet</div>
@@ -180,7 +202,7 @@ function AudienceStep() {
         </div>
       )}
 
-      {!importing && lists.length > 0 && (
+      {!importing && !pasting && lists.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {lists.map((l) => (
             <ListCard key={l.id} list={l} onDelete={() => remove(l.id)} />
@@ -230,6 +252,107 @@ function ListCard({ list, onDelete }: { list: OutreachList; onDelete: () => void
         <span>
           Consent: <span className="text-slate-700">{list.consentSource || 'attested'}</span>
         </span>
+      </div>
+    </div>
+  )
+}
+
+// ── Add-numbers flow (paste phone numbers — mobile-friendly, no file) ─────────
+function PasteCard({
+  onCancel,
+  onSave,
+}: {
+  onCancel: () => void
+  onSave: (list: OutreachList) => void
+}) {
+  const [text, setText] = useState('')
+  const [listName, setListName] = useState('Quick list')
+  const [consent, setConsent] = useState(false)
+  const [consentSource, setConsentSource] = useState('')
+  const contacts = useMemo(() => parseNumbers(text), [text])
+  const validN = contacts.filter((c) => c.phoneValid).length
+  const canSave = validN > 0 && consent && listName.trim().length > 0
+
+  const save = () => {
+    if (!canSave) return
+    onSave({
+      id: newId(),
+      name: listName.trim(),
+      source: 'manual',
+      consentSource: consentSource.trim(),
+      consentAt: Date.now(),
+      createdAt: Date.now(),
+      contacts,
+    })
+  }
+
+  return (
+    <div className="bg-white border border-slate-200 rounded-xl shadow-card">
+      <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
+        <div className="text-sm font-semibold text-ink-900">Add numbers</div>
+        <button onClick={onCancel} className="text-sm text-slate-500 hover:text-ink-900">
+          Cancel
+        </button>
+      </div>
+      <div className="p-5 space-y-4">
+        <div>
+          <label className="block text-sm text-slate-600 mb-1.5">Phone numbers</label>
+          <textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            rows={4}
+            placeholder={'Paste numbers — one per line or comma-separated\n9703933978, 3035056191, 9703933629'}
+            className="w-full text-sm text-ink-900 bg-slate-50 border border-slate-200 rounded-md p-2.5 focus:outline-none focus:ring-2 focus:ring-botscrew-400 resize-y"
+          />
+          <div className="text-xs text-slate-500 mt-1.5">
+            <span className="text-success font-medium">{validN} callable</span>
+            {contacts.length - validN > 0 && (
+              <span className="text-warn font-medium"> · {contacts.length - validN} need review</span>
+            )}
+          </div>
+        </div>
+
+        <div className="bg-botscrew-50 border border-botscrew-100 rounded-lg p-4">
+          <label className="flex items-start gap-2.5 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={consent}
+              onChange={(e) => setConsent(e.target.checked)}
+              className="mt-0.5 h-4 w-4 accent-botscrew-500"
+            />
+            <span className="text-sm text-ink-900">
+              I confirm these contacts have <span className="font-semibold">opted in</span> to receive
+              calls from us.
+            </span>
+          </label>
+          <input
+            type="text"
+            value={consentSource}
+            onChange={(e) => setConsentSource(e.target.value)}
+            placeholder="How/where did they opt in? (optional for a test)"
+            className="mt-3 w-full text-sm px-3 py-2 border border-slate-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-botscrew-400"
+          />
+        </div>
+
+        <div className="flex items-end gap-3">
+          <div className="flex-1">
+            <label className="block text-sm text-slate-600 mb-1.5">Audience name</label>
+            <input
+              type="text"
+              value={listName}
+              onChange={(e) => setListName(e.target.value)}
+              className="w-full text-sm px-3 py-2 border border-slate-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-botscrew-400"
+            />
+          </div>
+          <button
+            onClick={save}
+            disabled={!canSave}
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-md text-white shadow-sm disabled:opacity-40 disabled:cursor-not-allowed bg-action-500 hover:bg-action-600"
+          >
+            <CheckCircle2 className="h-4 w-4" strokeWidth={2} />
+            Save audience
+          </button>
+        </div>
       </div>
     </div>
   )
