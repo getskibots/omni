@@ -11,8 +11,11 @@
  */
 import { jacksonHole, renderTemplate } from '../data/parent'
 
-// Realtime voice can't swallow a whole knowledge base — cap what we inject.
-const CAP = 3500
+// Cap what we inject into the call brief. Raised so a resort's full assembled
+// Parent (instructions + preset) carries over — ~20k chars ≈ ~5k tokens, well
+// within a realtime session's system-prompt budget. A knowledge base larger than
+// this is the signal to move to retrieval (production), not a bigger prompt.
+const CAP = 20000
 
 export interface OmniKnowledge {
   text: string // (capped) knowledge to inject into the call brief
