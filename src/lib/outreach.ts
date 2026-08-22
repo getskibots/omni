@@ -207,6 +207,7 @@ export interface OutreachScript {
   sections: ScriptSections
   voice: string // OpenAI voice name (e.g. "ash") or a custom voice_id
   purpose?: string // which "play" it started from (see data/outreachPurposes)
+  useOmniKnowledge?: boolean // fold the resort's Omni knowledge into the call brief
   createdAt: number
   updatedAt: number
 }
@@ -265,13 +266,15 @@ export function fillMerge(text: string, contact: Pick<OutreachContact, 'name' | 
 
 // Assemble the talking-point sections into the single agent brief the probe-voice
 // engine runs (converse/agent mode). Fill merge fields FIRST, per contact.
-export function assembleBrief(s: ScriptSections, resort: string): string {
+export function assembleBrief(s: ScriptSections, resort: string, omniKnowledge?: string): string {
   const parts = [
     `You're a warm, natural voice agent making an OUTBOUND call for ${resort}. You are the CALLER — keep it brief and human, a real phone conversation, never a script read aloud.`,
     s.opening.trim() && `Open the call warmly, in your own words, along the lines of: "${s.opening.trim()}"`,
     s.goal.trim() && `GOAL OF THE CALL: ${s.goal.trim()}`,
     s.points.trim() && `WORK THESE POINTS IN naturally (don't list them):\n${s.points.trim()}`,
     s.knowledge.trim() && `YOU CAN ANSWER QUESTIONS ABOUT:\n${s.knowledge.trim()}`,
+    omniKnowledge?.trim() &&
+      `KNOWLEDGE BASE — the same knowledge that powers ${resort}'s assistant. Use it to answer accurately; weave it in naturally, never recite it verbatim:\n"""\n${omniKnowledge.trim()}\n"""`,
     s.ask.trim() && `STEER TOWARD THIS ASK: ${s.ask.trim()}`,
     s.guardrails.trim() && `RULES:\n${s.guardrails.trim()}`,
     s.voicemail.trim() && `IF IT GOES TO VOICEMAIL: ${s.voicemail.trim()}`,

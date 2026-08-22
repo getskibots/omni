@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { Plus, ChevronLeft, Sparkles, CheckCircle2, Phone, Tag, ShieldCheck, AlertTriangle } from 'lucide-react'
 import { PURPOSES, type Purpose } from '../data/outreachPurposes'
+import { loadOmniKnowledge } from '../lib/omniKnowledge'
 import {
   loadScripts,
   saveScripts,
@@ -137,9 +138,11 @@ function ScriptComposer({
   const [sections, setSections] = useState<ScriptSections>(initial?.sections ?? emptySections())
   const [voice, setVoice] = useState(initial?.voice ?? OPENAI_VOICES_MALE[1]) // "ash"
   const [purposeKey, setPurposeKey] = useState(initial?.purpose ?? '')
+  const [useOmni, setUseOmni] = useState(initial?.useOmniKnowledge ?? true)
   const [drafting, setDrafting] = useState(false)
   const [draftErr, setDraftErr] = useState('')
   const fields = mergeFields()
+  const omni = loadOmniKnowledge()
   const selectedPurpose = PURPOSES.find((p) => p.key === purposeKey)
 
   // Apply a purpose "play": seed the sections + suggested voice. {{resort}} is
@@ -222,6 +225,7 @@ function ScriptComposer({
       sections,
       voice,
       purpose: purposeKey || undefined,
+      useOmniKnowledge: useOmni,
       createdAt: initial?.createdAt ?? now,
       updatedAt: now,
     })
@@ -361,6 +365,26 @@ function ScriptComposer({
           ))}
         </div>
         {draftErr && <p className="text-xs text-danger">{draftErr}</p>}
+
+        <label className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={useOmni}
+            onChange={(e) => setUseOmni(e.target.checked)}
+            className="h-4 w-4 accent-botscrew-500"
+          />
+          <span className="text-sm text-ink-900">
+            Use my <span className="font-medium">Omni Knowledge</span> — answer from the same brain as
+            your inbound bot
+          </span>
+          {omni ? (
+            <span className="inline-flex items-center gap-1 text-[11px] text-success font-medium">
+              ● connected · ~{omni.chars.toLocaleString()} chars
+            </span>
+          ) : (
+            <span className="text-[11px] text-slate-400">nothing saved on the Knowledge page yet</span>
+          )}
+        </label>
       </div>
 
       {/* The sections */}

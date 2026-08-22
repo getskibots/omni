@@ -12,6 +12,7 @@ import {
   ShieldCheck,
 } from 'lucide-react'
 import { isOpenAIVoice } from '../data/parent'
+import { loadOmniKnowledge } from '../lib/omniKnowledge'
 import {
   loadLists,
   loadScripts,
@@ -61,7 +62,8 @@ async function placeCall(
   resort: string,
 ): Promise<{ jobId?: string; callSid?: string; error?: string; capped?: boolean }> {
   const filled = fillSections(script.sections, contact)
-  const brief = assembleBrief(filled, resort)
+  const omni = script.useOmniKnowledge ? loadOmniKnowledge() : null
+  const brief = assembleBrief(filled, resort, omni?.text)
   const vp = voiceParams(script.voice)
   const r = await fetch('/api/outbound-call', {
     method: 'POST',
