@@ -10,6 +10,7 @@ import {
   ChevronRight,
   AlertTriangle,
   ShieldCheck,
+  MessageSquare,
 } from 'lucide-react'
 import { isOpenAIVoice } from '../data/parent'
 import { loadOmniKnowledge } from '../lib/omniKnowledge'
@@ -19,8 +20,9 @@ import {
   loadRuns,
   saveRuns,
   newId,
-  fillMerge,
+  fillSections,
   assembleBrief,
+  smsBody,
   validCount,
   type OutreachList,
   type OutreachScript,
@@ -28,7 +30,6 @@ import {
   type OutreachRun,
   type OutreachCall,
   type CallStatus,
-  type ScriptSections,
 } from '../lib/outreach'
 
 const POLL_MS = 3000
@@ -39,19 +40,6 @@ function voiceParams(voice: string): { engine: 'openai' | 'elevenlabs'; guestVoi
   return isOpenAIVoice(voice)
     ? { engine: 'openai', guestVoice: voice }
     : { engine: 'elevenlabs', elevenVoiceId: voice }
-}
-
-function fillSections(s: ScriptSections, contact: Pick<OutreachContact, 'name' | 'fields'>): ScriptSections {
-  const f = (t: string) => fillMerge(t, contact)
-  return {
-    goal: f(s.goal),
-    opening: f(s.opening),
-    points: f(s.points),
-    knowledge: f(s.knowledge),
-    ask: f(s.ask),
-    guardrails: f(s.guardrails),
-    voicemail: f(s.voicemail),
-  }
 }
 
 // Place one call via the Omni proxy → probe-voice engine.
@@ -80,6 +68,26 @@ async function placeCall(
   })
   const j = await r.json().catch(() => ({}))
   return { jobId: j.jobId, callSid: j.callSid, error: j.error, capped: r.status === 429 }
+}
+
+// Text a guest the link via the Omni proxy → probe-voice /sms.
+async function sendLinkSms(
+  to: string,
+  linkUrl: string,
+  contactName: string,
+  resort: string,
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const r = await fetch('/api/outbound-sms', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ to, body: smsBody(linkUrl, contactName, resort) }),
+    })
+    const j = await r.json().catch(() => ({}))
+    return { ok: r.ok && !!j.sid, error: j.error }
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'sms failed' }
+  }
 }
 
 async function pollUntilDone(jobId: string, onTick?: (snap: any) => void): Promise<any> {
@@ -158,6 +166,19 @@ export default function OutreachLaunchStep({ resortName }: { resortName: string 
     }
   }
 
+  const testText = async () => {
+    if (!script?.linkUrl || !testPhone.trim()) return
+    setTesting(true)
+    setTestNote('Sending text…')
+    const sms = await sendLinkSms(testPhone.trim(), script.linkUrl, '', resortName)
+    setTestNote(
+      sms.ok
+        ? 'Text sent — check your phone.'
+        : `Text failed: ${sms.error || 'unknown'} (delivery needs a verified sender).`,
+    )
+    setTesting(false)
+  }
+
   const launch = async () => {
     if (!audience || !script || !callable.length) return
     cancelRef.current = false
@@ -211,6 +232,14 @@ export default function OutreachLaunchStep({ resortName }: { resortName: string 
         call.error = final.status === 'error' ? final.error : undefined
         flush()
         persist(r)
+        // Follow up with the link if the script asks for it and the call connected.
+        if (call.status === 'done' && script.textLink && script.linkUrl) {
+          const sms = await sendLinkSms(c.phone, script.linkUrl, c.name, resortName)
+          call.texted = sms.ok
+          if (!sms.ok && sms.error && !call.error) call.error = `text: ${sms.error}`
+          flush()
+          persist(r)
+        }
       } catch (e) {
         call.status = 'failed'
         call.error = e instanceof Error ? e.message : 'call failed'
@@ -293,6 +322,15 @@ export default function OutreachLaunchStep({ resortName }: { resortName: string 
           >
             {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Phone className="h-4 w-4" />}
             {testing ? 'Calling…' : 'Test call'}
+          </button>
+          <button
+            onClick={testText}
+            disabled={testing || !script?.linkUrl || !testPhone.trim()}
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium border border-slate-300 text-ink-900 hover:bg-slate-50 rounded-md disabled:opacity-40"
+            title={script?.linkUrl ? 'Text yourself the script link' : 'Add a Link to the script first'}
+          >
+            <MessageSquare className="h-4 w-4" strokeWidth={2} />
+            Text me the link
           </button>
         </div>
         {testNote && <p className="text-xs text-slate-600 mt-2">{testNote}</p>}
@@ -378,6 +416,11 @@ export function CallsTable({ run }: { run: OutreachRun }) {
                   <div className="text-[11px] text-slate-400 tabular-nums">{c.phone}</div>
                 </div>
                 {c.outcome && <span className="text-xs text-slate-500 hidden sm:block">{c.outcome}</span>}
+                {c.texted && (
+                  <span className="inline-flex items-center gap-1 text-[11px] text-success" title="Link texted">
+                    <MessageSquare className="h-3 w-3" /> texted
+                  </span>
+                )}
                 <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${meta.cls}`}>
                   <meta.Icon className={`h-3 w-3 ${spinning ? 'animate-spin' : ''}`} />
                   {meta.label}

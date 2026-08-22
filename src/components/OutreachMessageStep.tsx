@@ -2,18 +2,23 @@ import { useRef, useState } from 'react'
 import { Plus, ChevronLeft, Sparkles, CheckCircle2, Phone, Tag, ShieldCheck, AlertTriangle } from 'lucide-react'
 import { PURPOSES, type Purpose } from '../data/outreachPurposes'
 import { loadOmniKnowledge } from '../lib/omniKnowledge'
+import TestVoiceModal from './TestVoiceModal'
 import {
   loadScripts,
   saveScripts,
   newId,
   emptySections,
   mergeFields,
+  assembleBrief,
+  fillSections,
   type OutreachScript,
   type ScriptSections,
 } from '../lib/outreach'
 import {
   OPENAI_VOICES_FEMALE,
   OPENAI_VOICES_MALE,
+  VOICE_MODEL_OPTIONS,
+  VOICE_TRANSCRIPTION_OPTIONS,
   loadCustomVoices,
   type CustomVoice,
 } from '../data/parent'
@@ -139,8 +144,11 @@ function ScriptComposer({
   const [voice, setVoice] = useState(initial?.voice ?? OPENAI_VOICES_MALE[1]) // "ash"
   const [purposeKey, setPurposeKey] = useState(initial?.purpose ?? '')
   const [useOmni, setUseOmni] = useState(initial?.useOmniKnowledge ?? true)
+  const [linkUrl, setLinkUrl] = useState(initial?.linkUrl ?? '')
+  const [textLink, setTextLink] = useState(initial?.textLink ?? false)
   const [drafting, setDrafting] = useState(false)
   const [draftErr, setDraftErr] = useState('')
+  const [testOpen, setTestOpen] = useState(false)
   const fields = mergeFields()
   const omni = loadOmniKnowledge()
   const selectedPurpose = PURPOSES.find((p) => p.key === purposeKey)
@@ -226,10 +234,23 @@ function ScriptComposer({
       voice,
       purpose: purposeKey || undefined,
       useOmniKnowledge: useOmni,
+      linkUrl: linkUrl.trim() || undefined,
+      textLink: textLink && !!linkUrl.trim(),
       createdAt: initial?.createdAt ?? now,
       updatedAt: now,
     })
   }
+
+  // Assemble a test brief from the current draft (placeholder contact) so you can
+  // talk to the script in-browser before saving or dialing.
+  const testFilled = fillSections(sections, { name: 'there', fields: {} })
+  const testSystemPrompt = assembleBrief(testFilled, resortName, useOmni ? omni?.text : undefined)
+  const testVoiceStack = {
+    model: VOICE_MODEL_OPTIONS[0],
+    voice,
+    transcriptionModel: VOICE_TRANSCRIPTION_OPTIONS[0],
+  }
+  const canTest = testFilled.goal.trim().length > 0 || testFilled.opening.trim().length > 0
 
   return (
     <div className="space-y-5">
@@ -242,14 +263,25 @@ function ScriptComposer({
           <ChevronLeft className="h-4 w-4" />
           Scripts
         </button>
-        <button
-          onClick={save}
-          disabled={!canSave}
-          className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-md text-white shadow-sm disabled:opacity-40 disabled:cursor-not-allowed bg-action-500 hover:bg-action-600"
-        >
-          <CheckCircle2 className="h-4 w-4" strokeWidth={2} />
-          Save script
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setTestOpen(true)}
+            disabled={!canTest}
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-md border border-botscrew-300 text-botscrew-600 hover:bg-botscrew-50 disabled:opacity-40 disabled:cursor-not-allowed"
+            title="Talk to this script in your browser (mic)"
+          >
+            <Phone className="h-4 w-4" strokeWidth={2} />
+            Test in browser
+          </button>
+          <button
+            onClick={save}
+            disabled={!canSave}
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-md text-white shadow-sm disabled:opacity-40 disabled:cursor-not-allowed bg-action-500 hover:bg-action-600"
+          >
+            <CheckCircle2 className="h-4 w-4" strokeWidth={2} />
+            Save script
+          </button>
+        </div>
       </div>
 
       {/* Purpose picker — start from a play */}
@@ -385,6 +417,33 @@ function ScriptComposer({
             <span className="text-[11px] text-slate-400">nothing saved on the Knowledge page yet</span>
           )}
         </label>
+
+        <div className="border-t border-slate-100 pt-3 space-y-2">
+          <label className="block text-sm text-slate-600">
+            Link to text guests <span className="text-slate-400 font-normal">(optional)</span>
+          </label>
+          <input
+            type="url"
+            value={linkUrl}
+            onChange={(e) => setLinkUrl(e.target.value)}
+            placeholder="https://book.jacksonhole.com/…"
+            className="w-full text-sm px-3 py-2 border border-slate-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-botscrew-400"
+          />
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={textLink}
+              onChange={(e) => setTextLink(e.target.checked)}
+              disabled={!linkUrl.trim()}
+              className="h-4 w-4 accent-botscrew-500 disabled:opacity-40"
+            />
+            <span className="text-sm text-ink-900">Auto-text this link after an answered call</span>
+          </label>
+          <p className="text-[11px] text-slate-400">
+            Every text includes “Reply STOP to opt out.” US delivery needs a verified sender
+            (toll-free / 10DLC).
+          </p>
+        </div>
       </div>
 
       {/* The sections */}
@@ -415,6 +474,15 @@ function ScriptComposer({
           </div>
         ))}
       </div>
+
+      <TestVoiceModal
+        open={testOpen}
+        onClose={() => setTestOpen(false)}
+        channel="voice"
+        systemPrompt={testSystemPrompt}
+        voiceStack={testVoiceStack}
+        welcomeMessage={testFilled.opening}
+      />
     </div>
   )
 }

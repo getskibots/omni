@@ -208,8 +208,17 @@ export interface OutreachScript {
   voice: string // OpenAI voice name (e.g. "ash") or a custom voice_id
   purpose?: string // which "play" it started from (see data/outreachPurposes)
   useOmniKnowledge?: boolean // fold the resort's Omni knowledge into the call brief
+  linkUrl?: string // the link the AI offers to text
+  textLink?: boolean // auto-text linkUrl after an answered call
   createdAt: number
   updatedAt: number
+}
+
+// The SMS the guest receives — friendly, names the resort, always opt-out-able.
+export function smsBody(linkUrl: string, contactName: string, resort: string): string {
+  const first = (contactName || '').trim().split(/\s+/)[0]
+  const hi = first && first.toLowerCase() !== 'there' ? `Hi ${first}, ` : 'Hi, '
+  return `${hi}here's the link from ${resort}: ${linkUrl}\n\nReply STOP to opt out.`
 }
 
 const SCRIPTS_KEY = 'omni.outreach.scripts'
@@ -264,6 +273,23 @@ export function fillMerge(text: string, contact: Pick<OutreachContact, 'name' | 
   })
 }
 
+// Fill every section's {{tokens}} for one contact (or a placeholder for tests).
+export function fillSections(
+  s: ScriptSections,
+  contact: Pick<OutreachContact, 'name' | 'fields'>,
+): ScriptSections {
+  const f = (t: string) => fillMerge(t, contact)
+  return {
+    goal: f(s.goal),
+    opening: f(s.opening),
+    points: f(s.points),
+    knowledge: f(s.knowledge),
+    ask: f(s.ask),
+    guardrails: f(s.guardrails),
+    voicemail: f(s.voicemail),
+  }
+}
+
 // Assemble the talking-point sections into the single agent brief the probe-voice
 // engine runs (converse/agent mode). Fill merge fields FIRST, per contact.
 export function assembleBrief(s: ScriptSections, resort: string, omniKnowledge?: string): string {
@@ -295,6 +321,7 @@ export interface OutreachCall {
   callSid?: string
   outcome?: string // endedReason / simple disposition
   transcript?: { role: string; text: string }[]
+  texted?: boolean // link SMS sent after the call
   error?: string
 }
 
