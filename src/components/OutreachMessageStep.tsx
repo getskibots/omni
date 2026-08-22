@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
-import { Plus, ChevronLeft, Sparkles, CheckCircle2, Phone, Tag } from 'lucide-react'
+import { Plus, ChevronLeft, Sparkles, CheckCircle2, Phone, Tag, ShieldCheck, AlertTriangle } from 'lucide-react'
+import { PURPOSES, type Purpose } from '../data/outreachPurposes'
 import {
   loadScripts,
   saveScripts,
@@ -135,9 +136,38 @@ function ScriptComposer({
   const [name, setName] = useState(initial?.name ?? '')
   const [sections, setSections] = useState<ScriptSections>(initial?.sections ?? emptySections())
   const [voice, setVoice] = useState(initial?.voice ?? OPENAI_VOICES_MALE[1]) // "ash"
+  const [purposeKey, setPurposeKey] = useState(initial?.purpose ?? '')
   const [drafting, setDrafting] = useState(false)
   const [draftErr, setDraftErr] = useState('')
   const fields = mergeFields()
+  const selectedPurpose = PURPOSES.find((p) => p.key === purposeKey)
+
+  // Apply a purpose "play": seed the sections + suggested voice. {{resort}} is
+  // swapped for the account name now; other tokens fill per contact at call time.
+  const applyPurpose = (p: Purpose) => {
+    const hasContent = [
+      sections.goal,
+      sections.opening,
+      sections.points,
+      sections.ask,
+      sections.knowledge,
+      sections.voicemail,
+    ].some((v) => v.trim())
+    if (hasContent && !window.confirm(`Replace the current script with the "${p.label}" template?`)) return
+    const wr = (t: string) => t.split('{{resort}}').join(resortName)
+    setSections({
+      goal: wr(p.seed.goal),
+      opening: wr(p.seed.opening),
+      points: wr(p.seed.points),
+      knowledge: wr(p.seed.knowledge),
+      ask: wr(p.seed.ask),
+      guardrails: wr(p.seed.guardrails),
+      voicemail: wr(p.seed.voicemail),
+    })
+    setVoice(p.voice)
+    setPurposeKey(p.key)
+    if (!name.trim()) setName(p.label)
+  }
 
   // Track the focused section field so a merge chip inserts at the cursor.
   const activeEl = useRef<HTMLTextAreaElement | null>(null)
@@ -191,6 +221,7 @@ function ScriptComposer({
       name: name.trim(),
       sections,
       voice,
+      purpose: purposeKey || undefined,
       createdAt: initial?.createdAt ?? now,
       updatedAt: now,
     })
@@ -215,6 +246,46 @@ function ScriptComposer({
           <CheckCircle2 className="h-4 w-4" strokeWidth={2} />
           Save script
         </button>
+      </div>
+
+      {/* Purpose picker — start from a play */}
+      <div className="bg-white border border-slate-200 rounded-xl shadow-card p-4">
+        <div className="text-sm font-semibold text-ink-900 mb-2">Start from a purpose</div>
+        <div className="flex flex-wrap gap-2">
+          {PURPOSES.map((p) => {
+            const active = purposeKey === p.key
+            return (
+              <button
+                key={p.key}
+                onClick={() => applyPurpose(p)}
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition ${
+                  active
+                    ? 'border-botscrew-400 bg-botscrew-50 text-botscrew-700 font-medium'
+                    : 'border-slate-200 bg-white text-ink-900 hover:bg-slate-50'
+                }`}
+              >
+                <span>{p.emoji}</span>
+                {p.label}
+              </button>
+            )
+          })}
+        </div>
+        {selectedPurpose && (
+          <div className="mt-3 flex flex-wrap items-center gap-3 text-xs">
+            {selectedPurpose.consent === 'consented' ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-success/10 text-success px-2 py-0.5 font-medium">
+                <ShieldCheck className="h-3.5 w-3.5" /> Consented audience
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 rounded-full bg-warn/10 text-warn px-2 py-0.5 font-medium">
+                <AlertTriangle className="h-3.5 w-3.5" /> Requires an opted-in list
+              </span>
+            )}
+            <span className="text-slate-500">
+              Suggested voice: <span className="text-ink-900 font-medium">{selectedPurpose.voice}</span>
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Name + voice + AI draft toolbar */}

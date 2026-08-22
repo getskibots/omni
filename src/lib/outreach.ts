@@ -206,6 +206,7 @@ export interface OutreachScript {
   name: string
   sections: ScriptSections
   voice: string // OpenAI voice name (e.g. "ash") or a custom voice_id
+  purpose?: string // which "play" it started from (see data/outreachPurposes)
   createdAt: number
   updatedAt: number
 }
