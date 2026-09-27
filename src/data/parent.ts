@@ -76,17 +76,22 @@ export interface CustomVoice {
  * in the GSB ElevenLabs workspace.
  */
 export const PREBAKED_CUSTOM_VOICES: CustomVoice[] = [
-  // Female
+  // GSB roster, reconciled against the live ElevenLabs account 2026-09-27.
+  // Every voice_id below was verified to exist; the previous list carried three
+  // that had been deleted (Winter p1ZXM5.., Forest 2u5AAM.., Hawk 2J5a0t..) plus
+  // Brandon, which has since been deleted too. Ordered by measured pitch.
+  // Gender is from measurement at 8 kHz, not from the name.
+  { id: 'pre-sky', name: 'Sky', voiceId: 'XcXEQzuLXRU9RcfWzEJt', gender: 'female', prebaked: true },
   { id: 'pre-autumn', name: 'Autumn', voiceId: 'ihescI8y0lnM6ikMAyGZ', gender: 'female', prebaked: true },
-  { id: 'pre-sierra', name: 'Sierra', voiceId: '0xibdd3BNglACBXTeQoJ', gender: 'female', prebaked: true },
-  { id: 'pre-sonny', name: 'Sonny', voiceId: 'HhwfzJctzawQF7G6zlbo', gender: 'female', prebaked: true },
-  { id: 'pre-winter', name: 'Winter', voiceId: 'p1ZXM5QbQ5JtHpWB7n5M', gender: 'female', prebaked: true },
-  // Male
-  { id: 'pre-forest', name: 'Forest', voiceId: '2u5AAMHdRp6fmmqDm2kq', gender: 'male', prebaked: true },
-  { id: 'pre-hawk', name: 'Hawk', voiceId: '2J5a0tOuiJLPoVd4xC8w', gender: 'male', prebaked: true },
-  { id: 'pre-river', name: 'River', voiceId: '9tGUFJVKv4fLO52eYj4h', gender: 'male', prebaked: true, accent: 'Kiwi' },
+  { id: 'pre-winter', name: 'Winter', voiceId: 'Wga4AkMTTLqEB1UDLXca', gender: 'female', prebaked: true },
+  { id: 'pre-hawk', name: 'Hawk', voiceId: 'HhwfzJctzawQF7G6zlbo', gender: 'female', prebaked: true },
+  { id: 'pre-summer', name: 'Summer', voiceId: '0xibdd3BNglACBXTeQoJ', gender: 'female', prebaked: true },
+  { id: 'pre-spring', name: 'Spring', voiceId: 'VeQ3WdpuUAgKrkxhJdH8', gender: 'female', prebaked: true },
+
   { id: 'pre-stone', name: 'Stone', voiceId: 'xUaP8oqnE6ERbbFQObbz', gender: 'male', prebaked: true },
-  { id: 'pre-brandon', name: 'Brandon', voiceId: 'LpnwrzbZy984kxCzwufi', gender: 'male', prebaked: true },
+  { id: 'pre-tasman', name: 'Tasman', voiceId: '9tGUFJVKv4fLO52eYj4h', gender: 'male', prebaked: true, accent: 'Kiwi' },
+  { id: 'pre-forest', name: 'Forest', voiceId: 'sdA58sxm7MFgpaS4pHgX', gender: 'male', prebaked: true },
+  { id: 'pre-maple', name: 'Maple', voiceId: 'A8ylUc0rON0hYbzMkzaZ', gender: 'male', prebaked: true, accent: 'Canadian' },
 ];
 
 export function isOpenAIVoice(voice: string): boolean {
