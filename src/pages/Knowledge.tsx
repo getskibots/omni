@@ -615,8 +615,7 @@ function VoiceModelRow({
                     .filter((cv) => cv.gender === 'female')
                     .map((cv) => (
                       <option key={cv.id} value={cv.voiceId}>
-                        {cv.name}
-                        {cv.accent ? ` (${cv.accent})` : ''}
+                        {`${cv.name} (${cv.gender === 'female' ? 'Female' : 'Male'}${cv.accent ? `, ${cv.accent}` : ''})`}
                       </option>
                     ))}
                 </optgroup>
@@ -625,8 +624,7 @@ function VoiceModelRow({
                     .filter((cv) => cv.gender === 'male')
                     .map((cv) => (
                       <option key={cv.id} value={cv.voiceId}>
-                        {cv.name}
-                        {cv.accent ? ` (${cv.accent})` : ''}
+                        {`${cv.name} (${cv.gender === 'female' ? 'Female' : 'Male'}${cv.accent ? `, ${cv.accent}` : ''})`}
                       </option>
                     ))}
                 </optgroup>

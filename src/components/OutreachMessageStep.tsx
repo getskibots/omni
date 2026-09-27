@@ -36,8 +36,12 @@ const SECTION_DEFS: { key: SectionKey; label: string; hint: string; placeholder:
   { key: 'voicemail', label: 'Voicemail', hint: 'What to do if no one answers.', placeholder: 'Leave a 15-sec friendly message mentioning the pre-book link', rows: 2 },
 ]
 
-const voiceLabel = (voice: string, custom: CustomVoice[]) =>
-  custom.find((c) => c.voiceId === voice)?.name || voice
+const voiceLabel = (voice: string, custom: CustomVoice[]) => {
+  const c = custom.find((x) => x.voiceId === voice)
+  // Saved scripts list the voice by name alone; the nature names give no clue
+  // whether the caller will hear a man or a woman, so spell it out.
+  return c ? `${c.name} (${c.gender === 'female' ? 'Female' : 'Male'})` : voice
+}
 
 export default function OutreachMessageStep({ resortName }: { resortName: string }) {
   const [scripts, setScripts] = useState<OutreachScript[]>(() => loadScripts())
@@ -358,15 +362,18 @@ function ScriptComposer({
                   </option>
                 ))}
               </optgroup>
-              {custom.length > 0 && (
-                <optgroup label="Custom voices">
-                  {custom.map((cv) => (
-                    <option key={cv.id} value={cv.voiceId}>
-                      {cv.name}
-                      {cv.accent ? ` (${cv.accent})` : ''}
-                    </option>
-                  ))}
-                </optgroup>
+              {(['female', 'male'] as const).map((g) =>
+                custom.some((cv) => cv.gender === g) ? (
+                  <optgroup key={g} label={g === 'female' ? 'GSB · Female' : 'GSB · Male'}>
+                    {custom
+                      .filter((cv) => cv.gender === g)
+                      .map((cv) => (
+                        <option key={cv.id} value={cv.voiceId}>
+                          {`${cv.name} (${cv.gender === 'female' ? 'Female' : 'Male'}${cv.accent ? `, ${cv.accent}` : ''})`}
+                        </option>
+                      ))}
+                  </optgroup>
+                ) : null,
               )}
             </select>
           </div>
