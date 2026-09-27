@@ -80,11 +80,13 @@ export const PREBAKED_CUSTOM_VOICES: CustomVoice[] = [
   // Every voice_id below was verified to exist; the previous list carried three
   // that had been deleted (Winter p1ZXM5.., Forest 2u5AAM.., Hawk 2J5a0t..) plus
   // Brandon, which has since been deleted too. Ordered by measured pitch.
-  // Gender is from measurement at 8 kHz, not from the name.
+  // Gender is from measurement at 8 kHz, not from the name. 'Hawk' was renamed
+  // 'Wren' once measurement confirmed it is female (178 Hz) - same bird lineage,
+  // but the name now matches the voice.
   { id: 'pre-sky', name: 'Sky', voiceId: 'XcXEQzuLXRU9RcfWzEJt', gender: 'female', prebaked: true },
   { id: 'pre-autumn', name: 'Autumn', voiceId: 'ihescI8y0lnM6ikMAyGZ', gender: 'female', prebaked: true },
   { id: 'pre-winter', name: 'Winter', voiceId: 'Wga4AkMTTLqEB1UDLXca', gender: 'female', prebaked: true },
-  { id: 'pre-hawk', name: 'Hawk', voiceId: 'HhwfzJctzawQF7G6zlbo', gender: 'female', prebaked: true },
+  { id: 'pre-wren', name: 'Wren', voiceId: 'HhwfzJctzawQF7G6zlbo', gender: 'female', prebaked: true },
   { id: 'pre-summer', name: 'Summer', voiceId: '0xibdd3BNglACBXTeQoJ', gender: 'female', prebaked: true },
   { id: 'pre-spring', name: 'Spring', voiceId: 'VeQ3WdpuUAgKrkxhJdH8', gender: 'female', prebaked: true },
 
