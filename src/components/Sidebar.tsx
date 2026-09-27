@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import {
   TrendingUp,
+  Megaphone,
   Lightbulb,
   MessageSquareText,
   Shuffle,
@@ -22,6 +23,7 @@ interface NavItem {
 
 const items: NavItem[] = [
   { to: '/analytics', label: 'Analytics', Icon: TrendingUp },
+  { to: '/outreach', label: 'Outreach', Icon: Megaphone },
   { to: '/knowledge', label: 'Knowledge', Icon: Lightbulb },
   { to: '/ai-edits', label: 'AI Edits', Icon: MessageSquareText },
   { to: '/flows', label: 'Flows', Icon: Shuffle },

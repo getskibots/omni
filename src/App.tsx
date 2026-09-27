@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import DashboardShell from './components/DashboardShell';
 import Knowledge from './pages/Knowledge';
+import Outreach from './pages/Outreach';
 import Placeholder from './pages/Placeholder';
 import SettingsChannels from './pages/SettingsChannels';
 import Widget from './pages/Widget';
@@ -12,6 +13,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Navigate to="/knowledge" replace />} />
         <Route path="/knowledge" element={<Knowledge />} />
+        <Route path="/outreach" element={<Outreach />} />
         <Route path="/analytics" element={<Placeholder title="Analytics" />} />
         <Route path="/support" element={<Support />} />
         <Route path="/ai-edits" element={<Placeholder title="AI Edits" />} />
